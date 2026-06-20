@@ -3,98 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AU News Intelligence Portal</title>
+    <title>AU Forensic History Portal</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --ink: #1a1a1a; --paper: #fdfaf5; --accent: #004a99; --gold: #d4af37; --danger: #8b0000; }
-        body { margin: 0; font-family: 'Segoe UI', serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); }
+        :root { --cobalt: #001f3f; --gold: #ffca28; --paper: #fdfaf5; --danger: #b71c1c; --green: #2e7d32; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); color: #333; }
         
-        #header { padding: 15px 25px; background: var(--ink); color: white; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; z-index: 1001; }
+        #header { padding: 15px 25px; background: var(--cobalt); color: white; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; z-index: 1001; }
+        #settings-bar { background: #00152b; padding: 10px 25px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--gold); z-index: 1000; }
+        
         .input-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 10px; text-transform: uppercase; color: var(--gold); font-weight: bold; }
         input, button { padding: 8px; border-radius: 4px; border: 1px solid #444; font-size: 13px; }
-        .btn-main { background: var(--gold); color: black; font-weight: bold; cursor: pointer; border: none; min-width: 180px; }
-        
-        #map { flex: 1 0 300px; width: 100%; border-bottom: 3px solid var(--gold); }
-        
-        #intel-container { display: flex; height: 400px; background: white; border-top: 1px solid #ccc; overflow: hidden; }
-        #suburb-list { flex: 1; overflow-y: auto; border-right: 1px solid #ddd; padding: 15px; background: #f9f9f9; }
-        #news-dossier { flex: 2; overflow-y: auto; padding: 15px; }
+        .btn-main { background: var(--gold); color: #000; font-weight: bold; cursor: pointer; border: none; min-width: 150px; }
 
-        .section-title { font-size: 12px; font-weight: 900; color: var(--ink); border-bottom: 2px solid var(--ink); margin-bottom: 12px; padding-bottom: 4px; text-transform: uppercase; }
+        #map { flex: 1 0 300px; width: 100%; border-bottom: 2px solid var(--gold); }
         
-        .suburb-chip { display: inline-block; padding: 4px 8px; background: #e0e0e0; margin: 2px; border-radius: 3px; font-size: 12px; font-weight: 500; }
-        
-        .dossier-card { border: 1px solid #ddd; padding: 12px; margin-bottom: 15px; border-radius: 5px; background: white; }
-        .dossier-card h4 { margin: 0 0 10px 0; color: var(--danger); border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        
-        .news-link { 
-            display: inline-block; padding: 6px 12px; margin: 4px 2px; 
-            background: white; color: var(--accent); text-decoration: none; 
-            border: 1px solid var(--accent); border-radius: 4px; font-size: 11px; font-weight: bold;
-        }
-        .news-link:hover { background: var(--accent); color: white; }
-        .trove-btn { background: var(--danger) !important; color: white !important; border-color: var(--danger) !important; }
+        #results-container { display: flex; height: 380px; background: white; border-top: 1px solid #ccc; overflow: hidden; }
+        #incident-feed { flex: 2; overflow-y: auto; border-right: 1px solid #ddd; padding: 15px; }
+        #news-mining { flex: 1.2; overflow-y: auto; background: #f0f2f5; padding: 15px; }
 
-        #loader { display: none; color: var(--gold); font-size: 12px; font-weight: bold; margin-left: 10px; }
+        .section-title { font-size: 11px; font-weight: 900; color: var(--cobalt); border-bottom: 2px solid var(--cobalt); margin-bottom: 10px; padding-bottom: 4px; text-transform: uppercase; }
+        
+        .item-card { border-bottom: 1px solid #eee; padding: 12px; display: block; text-decoration: none; color: inherit; transition: 0.2s; }
+        .item-card:hover { background: #fffde7; border-left: 4px solid var(--danger); }
+        .item-title { font-weight: bold; font-size: 14px; color: var(--danger); margin-bottom: 3px; }
+        .item-meta { font-size: 11px; color: #666; font-family: monospace; }
+        .tag { font-size: 9px; background: #ddd; padding: 2px 5px; border-radius: 3px; margin-right: 5px; font-weight: bold; }
+
+        .news-btn { display: block; padding: 8px; background: white; color: #004a99; text-decoration: none; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; margin-bottom: 6px; font-weight: bold; }
+        .news-btn:hover { background: #eef; }
+
+        /* Toggle */
+        .switch-container { display: flex; align-items: center; gap: 8px; color: white; font-size: 11px; font-weight: bold; }
+        .switch { position: relative; width: 34px; height: 18px; display: inline-block; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #333; transition: .3s; border-radius: 18px; border: 1px solid var(--gold); }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px; background: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background: var(--green); }
+        input:checked + .slider:before { transform: translateX(16px); }
+
+        #loader { display: none; color: var(--gold); font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <div class="input-group" style="flex: 2;">
-        <label>1. Investigation Center</label>
+    <div class="input-group" style="flex: 1;">
+        <label>Location Target</label>
         <div style="display: flex; gap: 5px;">
-            <input type="text" id="addressInput" placeholder="Suburb or City" style="flex:1">
-            <button onclick="searchAddress()" style="background:#333; color:white;">Set ROI</button>
+            <input type="text" id="addressInput" placeholder="Suburb or Landmark" style="flex:1">
+            <button onclick="searchAddress()" style="background:#333; color:white;">Go</button>
         </div>
     </div>
     <div class="input-group">
-        <label>2. Radius: <span id="radLabel">5</span> km</label>
+        <label>Radius: <span id="radLabel">5</span> km</label>
         <input type="range" id="radius" min="1" max="50" value="5">
     </div>
     <div class="input-group">
-        <label>3. Dates (1900-2000)</label>
-        <div style="display: flex; gap: 5px;">
-            <input type="number" id="startYear" value="1900" style="width:70px">
-            <input type="number" id="endYear" value="2000" style="width:70px">
+        <label>Years</label>
+        <div style="display:flex; gap:5px;">
+            <input type="number" id="startYear" value="1900" style="width:65px">
+            <input type="number" id="endYear" value="2000" style="width:65px">
         </div>
     </div>
-    <button class="btn-main" onclick="runIntelligenceHarvest()">HARVEST NEWS INTEL</button>
+    <button class="btn-main" onclick="executeForensicSearch()">FORENSIC SEARCH</button>
+</div>
+
+<div id="settings-bar">
+    <div class="switch-container">
+        <span>EXCLUDE LANDMARKS</span>
+        <label class="switch">
+            <input type="checkbox" id="landmarkToggle">
+            <span class="slider"></span>
+        </label>
+        <span>INCLUDE LANDMARKS</span>
+    </div>
+    <div id="loader">HARVESTING SUBURBS & SCANNING ARCHIVES...</div>
 </div>
 
 <div id="map"></div>
 
-<div id="intel-container">
-    <div id="suburb-list">
-        <div class="section-title">Suburbs within Radius</div>
-        <div id="suburbContent"><small>Click "Harvest" to identify localities.</small></div>
+<div id="results-container">
+    <div id="incident-feed">
+        <div class="section-title">Verified Historical Results</div>
+        <div id="listContent" style="color:#888; font-size:12px; padding:10px;">Select location and search.</div>
     </div>
-    <div id="news-dossier">
-        <div class="section-title">News Archive Dossiers</div>
-        <div id="loader">POLLING GEOSPATIAL DATA...</div>
-        <div id="dossierContent">
-            <p style="color: #666; font-style: italic;">Identify a region of interest on the map to generate news archive leads.</p>
-        </div>
+    <div id="news-mining">
+        <div class="section-title">Newspaper Investigation Dossiers</div>
+        <div id="miningLeads"></div>
     </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    const map = L.map('map').setView([-37.8136, 144.9631], 12); 
+    let currentPlaceName = "Australia";
+    const map = L.map('map').setView([-37.81, 144.96], 12); 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let pin, circle;
-
-    // Initial positioning
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => updateSelection(pos.coords.latitude, pos.coords.longitude, 13));
-    }
+    let pin, circle, markers = L.layerGroup().addTo(map);
 
     async function searchAddress() {
-        const query = document.getElementById('addressInput').value;
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Australia")}`);
+        const q = document.getElementById('addressInput').value;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ", Australia")}`);
         const data = await res.json();
         if (data.length > 0) updateSelection(data[0].lat, data[0].lon, 14);
     }
@@ -105,7 +117,7 @@
         if (pin) { pin.setLatLng([lat, lng]); circle.setLatLng([lat, lng]); circle.setRadius(r * 1000); }
         else {
             pin = L.marker([lat, lng], {draggable: true}).addTo(map);
-            circle = L.circle([lat, lng], { radius: r * 1000, color: '#d4af37', fillOpacity: 0.1 }).addTo(map);
+            circle = L.circle([lat, lng], { radius: r * 1000, color: '#ffca28', fillOpacity: 0.1 }).addTo(map);
         }
     }
 
@@ -115,75 +127,110 @@
         if (circle) circle.setRadius(e.target.value * 1000);
     };
 
-    async function runIntelligenceHarvest() {
+    async function executeForensicSearch() {
         if (!pin) return alert("Select a location.");
         const {lat, lng} = pin.getLatLng();
         const rad = document.getElementById('radius').value;
         const start = document.getElementById('startYear').value;
         const end = document.getElementById('endYear').value;
+        const landmarks = document.getElementById('landmarkToggle').checked;
 
         document.getElementById('loader').style.display = "block";
-        document.getElementById('suburbContent').innerHTML = "";
-        document.getElementById('dossierContent').innerHTML = "";
+        document.getElementById('listContent').innerHTML = "";
+        markers.clearLayers();
 
-        // 1. HARVEST SUBURBS IN RADIUS (Overpass API)
-        const overpassQuery = `[out:json];(node["place"~"suburb|town|village"](around:${rad * 1000},${lat},${lng}););out;`;
-        try {
-            const res = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(overpassQuery));
-            const data = await res.json();
-            const suburbs = [...new Set(data.elements.map(el => el.tags.name))].sort();
+        // 1. Harvest Suburbs from Overpass
+        const suburbs = await harvestSuburbs(lat, lng, rad);
+        
+        // 2. Generate News Dossiers for harvested suburbs
+        generateDossiers(suburbs[0] || "Australia", start, end);
 
-            if (suburbs.length === 0) {
-                document.getElementById('suburbContent').innerHTML = "No distinct suburbs identified.";
-                document.getElementById('loader').style.display = "none";
-                return;
-            }
+        // 3. Multi-source Search
+        const tasks = [
+            fetchWikidata(lat, lng, rad, start, end, landmarks),
+            ...suburbs.slice(0, 5).map(s => fetchWikipediaText(s, start, end)) 
+        ];
 
-            suburbs.forEach(s => {
-                const span = document.createElement('span');
-                span.className = 'suburb-chip';
-                span.innerText = s;
-                document.getElementById('suburbContent').appendChild(span);
-                
-                // 2. GENERATE DOSSIER FOR EACH SUBURB
-                createDossierCard(s, start, end);
-            });
-
-        } catch (e) { alert("Error harvesting suburb data."); }
+        await Promise.all(tasks);
         document.getElementById('loader').style.display = "none";
     }
 
-    function createDossierCard(suburb, start, end) {
-        const card = document.createElement('div');
-        card.className = 'dossier-card';
-        
-        // Define filters to focus on crimes, accidents, visits. Exclude sports.
-        const baseTerms = `(murder OR crime OR accident OR fire OR disaster OR visit OR "official opening") -sport -results`;
-        const dateRange = `${start}..${end}`;
-        
-        card.innerHTML = `<h4>Archive Search: ${suburb} (${start}-${end})</h4>`;
-        
-        // Trove (The Gold Standard for AU)
-        const troveUrl = `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${encodeURIComponent(suburb + " " + baseTerms.replace(/[()]/g, ""))}&dateFrom=${start}-01-01&dateTo=${end}-12-31`;
-        card.innerHTML += `<a href="${troveUrl}" target="_blank" class="news-link trove-btn">🇦🇺 Trove (National Library)</a>`;
+    async function harvestSuburbs(lat, lng, rad) {
+        const query = `[out:json];(node["place"~"suburb|town"](around:${rad * 1000},${lat},${lng}););out;`;
+        try {
+            const res = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query));
+            const data = await res.json();
+            return [...new Set(data.elements.map(el => el.tags.name))];
+        } catch (e) { return []; }
+    }
 
-        // The Age (Melbourne)
-        const ageUrl = `https://www.google.com/search?q=site:theage.com.au+"${encodeURIComponent(suburb)}"+${encodeURIComponent(baseTerms)}+${dateRange}`;
-        card.innerHTML += `<a href="${ageUrl}" target="_blank" class="news-link">🗞️ The Age</a>`;
+    async function fetchWikidata(lat, lng, rad, start, end, landmarks) {
+        let types = "wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q1543115 wd:Q3839 wd:Q214841 wd:Q132241";
+        if (landmarks) types += " wd:Q1081138 wd:Q575759 wd:Q49833";
 
-        // Sydney Morning Herald
-        const smhUrl = `https://www.google.com/search?q=site:smh.com.au+"${encodeURIComponent(suburb)}"+${encodeURIComponent(baseTerms)}+${dateRange}`;
-        card.innerHTML += `<a href="${smhUrl}" target="_blank" class="news-link">🗞️ SMH</a>`;
+        const query = `SELECT DISTINCT ?item ?itemLabel ?date ?loc ?type WHERE {
+            SERVICE wikibase:around {
+                ?item wdt:P625 ?loc .
+                bd:serviceParam wikibase:center "Point(${lng} ${lat})"^^geo:wktLiteral .
+                bd:serviceParam wikibase:radius "${rad}" .
+            }
+            ?item wdt:P31/wdt:P279* ?type .
+            VALUES ?type { ${types} }
+            MINUS { ?item wdt:P31/wdt:P279* wd:Q300920 } # No Sport
+            ?item wdt:P585|wdt:P580 ?date .
+            FILTER(YEAR(?date) >= ${start} && YEAR(?date) <= ${end})
+            SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+        } ORDER BY DESC(?date) LIMIT 50`;
 
-        // ABC News
-        const abcUrl = `https://www.google.com/search?q=site:abc.net.au+"${encodeURIComponent(suburb)}"+${encodeURIComponent(baseTerms)}+${dateRange}`;
-        card.innerHTML += `<a href="${abcUrl}" target="_blank" class="news-link">📡 ABC News</a>`;
+        try {
+            const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
+            const data = await res.json();
+            data.results.bindings.forEach(row => {
+                renderResult(row.itemLabel.value, new Date(row.date.value).getFullYear(), row.item.value, "DATABASE", row.loc.value);
+            });
+        } catch (e) {}
+    }
 
-        // Herald Sun / News Corp
-        const hsUrl = `https://www.google.com/search?q=site:heraldsun.com.au+"${encodeURIComponent(suburb)}"+${encodeURIComponent(baseTerms)}+${dateRange}`;
-        card.innerHTML += `<a href="${hsUrl}" target="_blank" class="news-link">📰 Herald Sun</a>`;
+    async function fetchWikipediaText(suburb, start, end) {
+        const query = `${suburb} (history OR crime OR accident OR disaster) -sport`;
+        const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            data.query.search.forEach(item => {
+                const yearMatch = item.snippet.match(/\b(19\d{2}|2000)\b/);
+                if (yearMatch) {
+                    renderResult(item.title, yearMatch[0], `https://en.wikipedia.org/?curid=${item.pageid}`, "TEXT MINING", null);
+                }
+            });
+        } catch (e) {}
+    }
 
-        document.getElementById('dossierContent').appendChild(card);
+    function renderResult(title, yr, url, source, locStr) {
+        if (locStr) {
+            const c = locStr.replace("Point(","").replace(")","").split(" ");
+            L.circleMarker([c[1], c[0]], { radius: 6, fillColor: '#b71c1c', color: '#000', weight: 1, fillOpacity: 0.8 }).addTo(markers);
+        }
+        const card = document.createElement('a');
+        card.className = 'item-card'; card.href = url; card.target = "_blank";
+        card.innerHTML = `<div class="item-title"><span class="tag">${source}</span>${title}</div><div class="item-meta">YEAR: ${yr}</div>`;
+        document.getElementById('listContent').prepend(card);
+    }
+
+    function generateDossiers(place, s, e) {
+        const container = document.getElementById('miningLeads');
+        container.innerHTML = "";
+        const terms = `(crime OR murder OR accident OR visit OR disaster) -sport`;
+        const news = [
+            { name: "🇦🇺 National Archives (Trove)", url: `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${encodeURIComponent(place)}&dateFrom=${s}-01-01&dateTo=${e}-12-31` },
+            { name: "🗞️ The Age Archive", url: `https://www.google.com/search?q=site:theage.com.au+"${encodeURIComponent(place)}"+${encodeURIComponent(terms)}+${s}..${e}` },
+            { name: "🗞️ SMH Archive", url: `https://www.google.com/search?q=site:smh.com.au+"${encodeURIComponent(place)}"+${encodeURIComponent(terms)}+${s}..${e}` }
+        ];
+        news.forEach(n => {
+            const btn = document.createElement('a');
+            btn.className = 'news-btn'; btn.href = n.url; btn.target = "_blank"; btn.innerText = n.name;
+            container.appendChild(btn);
+        });
     }
 </script>
 </body>
