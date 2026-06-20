@@ -3,91 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Integrated AU History Monitor</title>
+    <title>AU Historical Intelligence Portal</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --cobalt: #002147; --gold: #f1b51c; --paper: #f9f7f2; }
-        body { margin: 0; font-family: 'Times New Roman', serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); }
+        :root { --cobalt: #002147; --gold: #f1b51c; --paper: #fdfaf5; --danger: #b71c1c; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); }
         
         #header { 
             padding: 15px 25px; background: var(--cobalt); color: white; 
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px; align-items: end; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1001;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px; align-items: end; box-shadow: 0 4px 10px rgba(0,0,0,0.4); z-index: 1001;
         }
 
-        .input-group { display: flex; flex-direction: column; gap: 5px; font-family: sans-serif; }
-        label { font-size: 11px; text-transform: uppercase; color: var(--gold); font-weight: bold; }
-        
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 11px; text-transform: uppercase; color: var(--gold); font-weight: bold; letter-spacing: 1px; }
         input, button { padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
+        
         .btn-main { background: var(--gold); color: black; font-weight: bold; cursor: pointer; border: none; }
         .btn-main:hover { background: #e0a816; }
-
+        
         #map { flex-grow: 1; width: 100%; border-bottom: 3px solid var(--cobalt); }
         
-        #results-panel { height: 300px; overflow-y: auto; background: white; padding: 0; }
-        .results-header { padding: 10px 20px; background: #eee; border-bottom: 1px solid #ccc; font-family: sans-serif; position: sticky; top: 0; }
+        #results-container { display: flex; height: 350px; background: white; border-top: 1px solid #ccc; }
+        
+        #incident-feed { flex: 2; overflow-y: auto; border-right: 1px solid #ddd; padding: 15px; }
+        #deep-search-panel { flex: 1; overflow-y: auto; background: #f4f4f4; padding: 15px; border-left: 1px solid #ccc; }
+
+        .section-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid var(--cobalt); margin-bottom: 10px; padding-bottom: 5px; color: var(--cobalt); }
 
         .event-card { 
-            border-bottom: 1px solid #eee; padding: 15px 20px; 
-            display: flex; flex-direction: column; text-decoration: none; 
-            color: #222; transition: background 0.2s; cursor: pointer;
+            border-bottom: 1px solid #eee; padding: 12px; display: flex; flex-direction: column; 
+            text-decoration: none; color: #222; transition: 0.2s; cursor: pointer; border-radius: 4px;
         }
-        .event-card:hover { background: #fdfae6; }
+        .event-card:hover { background: #fffde7; border-left: 4px solid var(--danger); }
+        .event-title { font-weight: bold; color: var(--danger); font-size: 1.1em; }
+        .meta { font-size: 11px; color: #666; margin-top: 4px; font-family: monospace; }
         
-        .event-title { font-weight: bold; font-size: 1.2em; color: #8b0000; margin-bottom: 5px; }
-        .meta-row { display: flex; gap: 15px; font-size: 12px; font-family: sans-serif; color: #666; }
-        .tag { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        
-        #loader { display: none; color: var(--gold); font-size: 12px; font-family: sans-serif; margin-left: 10px; }
+        .search-dossier { 
+            display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
+        }
+        .dossier-link { 
+            display: block; padding: 10px; background: white; color: #333; text-decoration: none;
+            border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-weight: 500;
+        }
+        .dossier-link:hover { background: #eee; border-color: var(--cobalt); }
+
+        #loader { display: none; color: var(--gold); font-size: 12px; margin-left: 10px; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div id="header">
     <div class="input-group">
-        <label>Australian Region</label>
+        <label>Target Region (Australia)</label>
         <div style="display: flex; gap: 5px;">
-            <input type="text" id="addressInput" placeholder="Suburb, City or Landmark" style="flex:1">
+            <input type="text" id="addressInput" placeholder="Suburb or Landmark" style="flex:1">
             <button onclick="searchAddress()" style="cursor:pointer">Go</button>
         </div>
     </div>
     <div class="input-group">
-        <label>Search Radius: <span id="radLabel">10</span> km</label>
-        <input type="range" id="radius" min="1" max="50" value="10">
+        <label>Radius: <span id="radLabel">5</span> km</label>
+        <input type="range" id="radius" min="1" max="50" value="5">
     </div>
     <div class="input-group">
-        <label>Time Period</label>
+        <label>Timeline Range</label>
         <div style="display: flex; gap: 5px;">
             <input type="number" id="startYear" value="1900">
             <input type="number" id="endYear" value="2000">
         </div>
     </div>
     <div class="input-group">
-        <button class="btn-main" onclick="fetchIntegratedHistory()">Search Records</button>
-        <div id="loader">Consulting Australian Archives...</div>
+        <button class="btn-main" onclick="executeInquiry()">Initiate Intelligence Search</button>
+        <div id="loader">Scanning Australian Archives...</div>
     </div>
 </div>
 
 <div id="map"></div>
 
-<div id="results-panel">
-    <div class="results-header">
-        <strong>Integrated Historical Timeline (Wikidata, Wikipedia & Newspaper Records)</strong>
+<div id="results-container">
+    <div id="incident-feed">
+        <div class="section-title">Detected Incidents & Historical Articles</div>
+        <div id="listContent" style="color: #666;">Set location and search to populate.</div>
     </div>
-    <div id="listContent">
-        <p style="padding:20px; color:#666;">Enter an Australian location and click "Search Records" to reveal crimes, accidents, and historic visits.</p>
+    <div id="deep-search-panel">
+        <div class="section-title">News & Web Archive Dossiers</div>
+        <p style="font-size: 11px; color: #555;">External deep-links constructed for this region/timeline:</p>
+        <div id="dossierLinks" class="search-dossier">
+            <small>Pending inquiry...</small>
+        </div>
     </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    const map = L.map('map').setView([-37.8136, 144.9631], 12); // Defaults to Melbourne
+    let currentCity = "Australia";
+    const map = L.map('map').setView([-37.8136, 144.9631], 12); // Default Melbourne
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let pin, circle, eventMarkers = L.layerGroup().addTo(map);
 
-    // Initial user location
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => updateSelection(pos.coords.latitude, pos.coords.longitude, 13));
     }
@@ -96,7 +111,10 @@
         const query = document.getElementById('addressInput').value;
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Australia")}`);
         const data = await res.json();
-        if (data.length > 0) updateSelection(parseFloat(data[0].lat), parseFloat(data[0].lon), 14);
+        if (data.length > 0) {
+            currentCity = data[0].display_name.split(',')[0];
+            updateSelection(parseFloat(data[0].lat), parseFloat(data[0].lon), 14);
+        }
     }
 
     function updateSelection(lat, lng, zoom) {
@@ -115,8 +133,8 @@
         if (circle) circle.setRadius(e.target.value * 1000);
     };
 
-    async function fetchIntegratedHistory() {
-        if (!pin) return alert("Select a location on the map first.");
+    async function executeInquiry() {
+        if (!pin) return alert("Select a target location.");
         
         const {lat, lng} = pin.getLatLng();
         const rad = document.getElementById('radius').value;
@@ -127,8 +145,19 @@
         document.getElementById('listContent').innerHTML = "";
         eventMarkers.clearLayers();
 
-        // SPARQL Query: Combined Search for incidents referenced in the Wiki-ecosystem
-        // Filters for specific incident types (Crimes, Accidents, etc.) and EXCLUDES Sport (Q300920)
+        // 1. GENERATE DEEP SEARCH DOSSIERS (General Internet, Age, SMH, Trove)
+        generateDossiers(currentCity, start, end);
+
+        // 2. PARALLEL SEARCH: WIKIDATA & WIKIPEDIA GEODATA
+        Promise.all([
+            fetchWikidata(lat, lng, rad, start, end),
+            fetchWikipediaNearby(lat, lng, rad)
+        ]).then(() => {
+            document.getElementById('loader').style.display = "none";
+        });
+    }
+
+    async function fetchWikidata(lat, lng, rad, start, end) {
         const query = `
         SELECT DISTINCT ?event ?eventLabel ?date ?location ?article WHERE {
           SERVICE wikibase:around {
@@ -138,59 +167,73 @@
           }
           ?event wdt:P585 ?date .
           ?event wdt:P31/wdt:P279* ?type .
-          
-          # Incident Types: Crime, Accident, State Visit, Celebration, Disaster, Murder
           VALUES ?type { wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q1543115 wd:Q3839 wd:Q214841 wd:Q132241 }
-
-          # Strict exclusion of sports
           MINUS { ?event wdt:P31/wdt:P279* wd:Q300920 } 
-          
           FILTER(YEAR(?date) >= ${start} && YEAR(?date) <= ${end})
-          
           SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
           OPTIONAL {
             ?article schema:about ?event .
             ?article schema:inLanguage "en" .
             FILTER (SUBSTR(str(?article), 1, 25) = "https://en.wikipedia.org/")
           }
-        } ORDER BY DESC(?date) LIMIT 150`;
+        } ORDER BY DESC(?date) LIMIT 100`;
 
-        try {
-            const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
-            const data = await res.json();
-            const results = data.results.bindings;
+        const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
+        const data = await res.json();
+        
+        data.results.bindings.forEach(row => {
+            addEventToFeed(row.eventLabel.value, new Date(row.date.value).getFullYear(), row.article ? row.article.value : row.event.value, "Wikidata/Wikipedia Incident", row.location.value);
+        });
+    }
 
-            if (results.length === 0) {
-                document.getElementById('listContent').innerHTML = "<p style='padding:20px;'>No incidents found in the integrated archives for this radius and timeframe.</p>";
-            }
-
-            results.forEach(row => {
-                const c = row.location.value.replace("Point(","").replace(")","").split(" ");
-                const yr = new Date(row.date.value).getFullYear();
-                const sourceUrl = row.article ? row.article.value : row.event.value;
-                const sourceName = row.article ? "Wikipedia / News Archive" : "Wikidata Record";
-
-                L.marker([c[1], c[0]]).addTo(eventMarkers).bindPopup(`<b>${row.eventLabel.value}</b><br>${yr}`);
-
-                const card = document.createElement('a');
-                card.className = 'event-card';
-                card.href = sourceUrl;
-                card.target = "_blank";
-                card.innerHTML = `
-                    <div class="event-title">${row.eventLabel.value}</div>
-                    <div class="meta-row">
-                        <span>📅 <strong>${yr}</strong></span>
-                        <span><span class="tag">${sourceName}</span></span>
-                        <span>🇦🇺 Australia Incident</span>
-                    </div>
-                `;
-                document.getElementById('listContent').appendChild(card);
+    async function fetchWikipediaNearby(lat, lng, rad) {
+        // Geosearch for general Wikipedia historical/place articles nearby
+        const url = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gsradius=${rad*1000}&gscoord=${lat}|${lng}&format=json&origin=*`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data.query && data.query.geosearch) {
+            data.query.geosearch.forEach(page => {
+                // Filter out obviously non-historical pages or keep all for "context"
+                addEventToFeed(page.title, "Various", `https://en.wikipedia.org/?curid=${page.pageid}`, "Wikipedia Geolocation Match", `Point(${page.lon} ${page.lat})`);
             });
-        } catch (e) {
-            alert("Archive connection timed out. Please try again.");
-        } finally {
-            document.getElementById('loader').style.display = "none";
         }
+    }
+
+    function addEventToFeed(title, year, url, type, locStr) {
+        const coords = locStr.replace("Point(","").replace(")","").split(" ");
+        L.marker([coords[1], coords[0]]).addTo(eventMarkers).bindPopup(`<b>${title}</b><br>${year}`);
+
+        const card = document.createElement('a');
+        card.className = 'event-card';
+        card.href = url;
+        card.target = "_blank";
+        card.innerHTML = `
+            <div class="event-title">${title}</div>
+            <div class="meta">SOURCE: ${type} | YEAR: ${year}</div>
+        `;
+        document.getElementById('listContent').appendChild(card);
+    }
+
+    function generateDossiers(place, start, end) {
+        const dossierBox = document.getElementById('dossierLinks');
+        dossierBox.innerHTML = "";
+
+        const queries = [
+            { label: "🌐 General Web Search (Crimes/Events)", url: `https://www.google.com/search?q=${place}+historical+crimes+accidents+celebrations+${start}..${end}` },
+            { label: "🗞️ The Age (1900-2000 Archive)", url: `https://www.google.com/search?q=site:theage.com.au+${place}+${start}..${end}` },
+            { label: "🗞️ SMH (1900-2000 Archive)", url: `https://www.google.com/search?q=site:smh.com.au+${place}+${start}..${end}` },
+            { label: "🇦🇺 Trove Advanced Search (AU Newspapers)", url: `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${place}&dateFrom=${start}-01-01&dateTo=${end}-12-31` }
+        ];
+
+        queries.forEach(q => {
+            const link = document.createElement('a');
+            link.className = 'dossier-link';
+            link.href = q.url;
+            link.target = "_blank";
+            link.innerText = q.label;
+            dossierBox.appendChild(link);
+        });
     }
 </script>
 </body>
