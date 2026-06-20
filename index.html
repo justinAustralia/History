@@ -68,6 +68,7 @@
     </div>
     <div class="input-group">
         <label>Radius: <span id="radLabel">5</span> km</label>
+        <!-- Updated default value to 5 -->
         <input type="range" id="radius" min="1" max="50" value="5">
     </div>
     <div class="input-group">
@@ -112,6 +113,7 @@
 
     let pin, circle, eventMarkers = L.layerGroup().addTo(map);
 
+    // Initial positioning
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => updateSelection(pos.coords.latitude, pos.coords.longitude, 13));
     }
@@ -128,14 +130,24 @@
 
     function updateSelection(lat, lng, zoom) {
         if (zoom) map.setView([lat, lng], zoom);
-        if (pin) { pin.setLatLng([lat, lng]); circle.setLatLng([lat, lng]); }
-        else {
+        const radiusVal = document.getElementById('radius').value;
+        
+        if (pin) {
+            pin.setLatLng([lat, lng]);
+            circle.setLatLng([lat, lng]);
+            circle.setRadius(radiusVal * 1000);
+        } else {
             pin = L.marker([lat, lng], {draggable: true}).addTo(map);
-            circle = L.circle([lat, lng], { radius: document.getElementById('radius').value * 1000, color: '#002147', fillOpacity: 0.1 }).addTo(map);
+            circle = L.circle([lat, lng], { 
+                radius: radiusVal * 1000, 
+                color: '#002147', 
+                fillOpacity: 0.1 
+            }).addTo(map);
         }
     }
 
     map.on('click', e => updateSelection(e.latlng.lat, e.latlng.lng));
+    
     document.getElementById('radius').oninput = (e) => {
         document.getElementById('radLabel').innerText = e.target.value;
         if (circle) circle.setRadius(e.target.value * 1000);
@@ -156,11 +168,7 @@
         generateDossiers(currentCity, start, end);
 
         const tasks = [fetchWikidata(lat, lng, rad, start, end, includeLandmarks)];
-        if (includeLandmarks) {
-            tasks.push(fetchWikipediaNearby(lat, lng, rad, true)); // Request only landmarks
-        } else {
-            tasks.push(fetchWikipediaNearby(lat, lng, rad, false)); // Standard search
-        }
+        tasks.push(fetchWikipediaNearby(lat, lng, rad, includeLandmarks));
 
         Promise.all(tasks).then(() => {
             document.getElementById('loader').style.display = "none";
@@ -170,7 +178,6 @@
     async function fetchWikidata(lat, lng, rad, start, end, includeLandmarks) {
         let typeValues = "wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q1543115 wd:Q3839 wd:Q214841 wd:Q132241";
         if (includeLandmarks) {
-            // Add Landmark types: Historic Site, Landmark, Memorial, Monument, "Big Thing"
             typeValues += " wd:Q1081138 wd:Q84015776 wd:Q575759 wd:Q49833 wd:Q3013894";
         }
 
@@ -185,9 +192,8 @@
           VALUES ?type { ${typeValues} }
           MINUS { ?event wdt:P31/wdt:P279* wd:Q300920 } 
           
-          OPTIONAL { ?event wdt:P585 ?date . } # Incidents have dates
+          OPTIONAL { ?event wdt:P585 ?date . }
           
-          # If not including landmarks, strictly filter for events with dates in range
           ${includeLandmarks ? '' : 'FILTER(YEAR(?date) >= ' + start + ' && YEAR(?date) <= ' + end + ')'}
           
           SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
@@ -198,34 +204,36 @@
           }
         } LIMIT 150`;
 
-        const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
-        const data = await res.json();
-        
-        data.results.bindings.forEach(row => {
-            const isLandmark = ["Q1081138","Q84015776","Q575759","Q49833","Q3013894"].some(q => row.type.value.includes(q));
-            addEventToFeed(
-                row.eventLabel.value, 
-                row.date ? new Date(row.date.value).getFullYear() : "Permanent", 
-                row.article ? row.article.value : row.event.value, 
-                isLandmark ? "AU Landmark/Site" : "Historical Incident", 
-                row.location.value,
-                isLandmark
-            );
-        });
+        try {
+            const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
+            const data = await res.json();
+            data.results.bindings.forEach(row => {
+                const isL = ["Q1081138","Q84015776","Q575759","Q49833","Q3013894"].some(q => row.type.value.includes(q));
+                addEventToFeed(
+                    row.eventLabel.value, 
+                    row.date ? new Date(row.date.value).getFullYear() : "Permanent", 
+                    row.article ? row.article.value : row.event.value, 
+                    isL ? "AU Landmark/Site" : "Historical Incident", 
+                    row.location.value,
+                    isL
+                );
+            });
+        } catch(e) {}
     }
 
     async function fetchWikipediaNearby(lat, lng, rad, onlyLandmarks) {
         let url = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gsradius=${rad*1000}&gscoord=${lat}|${lng}&format=json&origin=*&gsprop=type`;
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (data.query && data.query.geosearch) {
-            data.query.geosearch.forEach(page => {
-                const isLandmark = page.type === 'landmark';
-                if (onlyLandmarks && !isLandmark) return;
-                addEventToFeed(page.title, "Place Info", `https://en.wikipedia.org/?curid=${page.pageid}`, "Wikipedia Geolocation", `Point(${page.lon} ${page.lat})`, isLandmark);
-            });
-        }
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.query && data.query.geosearch) {
+                data.query.geosearch.forEach(page => {
+                    const isL = page.type === 'landmark';
+                    if (onlyLandmarks && !isL) return;
+                    addEventToFeed(page.title, "Place Info", `https://en.wikipedia.org/?curid=${page.pageid}`, "Wikipedia Geolocation", `Point(${page.lon} ${page.lat})`, isL);
+                });
+            }
+        } catch(e) {}
     }
 
     function addEventToFeed(title, year, url, type, locStr, isLandmark) {
@@ -233,13 +241,8 @@
         const markerColor = isLandmark ? '#2d6a4f' : '#b71c1c';
         
         L.circleMarker([coords[1], coords[0]], {
-            radius: 8,
-            fillColor: markerColor,
-            color: "#000",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
-        }).addTo(eventMarkers).bindPopup(`<b>${title}</b><br>${year}`);
+            radius: 8, fillColor: markerColor, color: "#000", weight: 1, opacity: 1, fillOpacity: 0.8
+        }).addTo(eventMarkers).bindPopup(`<b>${title}</b><br>${year}<br><a href="${url}" target="_blank">View Source</a>`);
 
         const card = document.createElement('a');
         card.className = 'event-card' + (isLandmark ? ' landmark' : '');
@@ -252,8 +255,8 @@
         const dossierBox = document.getElementById('dossierLinks');
         dossierBox.innerHTML = "";
         const queries = [
-            { label: "🌐 General Search", url: `https://www.google.com/search?q=${place}+historical+crimes+accidents+celebrations+${start}..${end}` },
-            { label: "🇦🇺 Trove Newspapers", url: `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${place}&dateFrom=${start}-01-01&dateTo=${end}-12-31` }
+            { label: "🌐 General Web Investigation", url: `https://www.google.com/search?q=${place}+historical+crimes+accidents+celebrations+${start}..${end}` },
+            { label: "🇦🇺 Trove Digitised Newspapers", url: `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${place}&dateFrom=${start}-01-01&dateTo=${end}-12-31` }
         ];
         queries.forEach(q => {
             const link = document.createElement('a');
