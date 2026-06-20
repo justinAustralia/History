@@ -3,73 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AU Historical Intelligence Portal</title>
+    <title>AU Historical Intelligence Portal v4.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --cobalt: #002147; --gold: #f1b51c; --paper: #fdfaf5; --danger: #b71c1c; --green: #2d6a4f; }
-        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); }
+        :root { --cobalt: #001f3f; --gold: #ffca28; --paper: #fdfaf5; --danger: #b71c1c; --green: #2e7d32; --shadow: rgba(0,0,0,0.2); }
+        body { margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); color: #333; }
         
-        /* Main Controls */
-        #header { 
-            padding: 15px 25px; background: var(--cobalt); color: white; 
-            display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3); z-index: 1001;
-        }
+        /* Layout Components */
+        #header { padding: 15px 25px; background: var(--cobalt); color: white; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; z-index: 1001; }
+        #settings-bar { background: #00152b; padding: 10px 25px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--gold); z-index: 1000; }
+        #map { flex-grow: 1; width: 100%; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        #results-container { display: flex; height: 380px; background: white; border-top: 1px solid #ccc; }
 
-        /* Secondary Settings Bar (for Toggle) */
-        #settings-bar {
-            background: #00162d; padding: 10px 25px; display: flex; align-items: center; gap: 15px;
-            border-bottom: 1px solid var(--gold); z-index: 1000;
-        }
+        /* UI Elements */
+        .input-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 10px; text-transform: uppercase; color: var(--gold); font-weight: bold; letter-spacing: 1px; }
+        input, button { padding: 10px; border-radius: 4px; border: 1px solid #444; font-size: 14px; }
+        .btn-main { background: var(--gold); color: #000; font-weight: bold; cursor: pointer; border: none; min-width: 200px; transition: 0.2s; }
+        .btn-main:hover { background: #ffd54f; box-shadow: 0 0 15px var(--gold); }
 
-        .input-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 11px; text-transform: uppercase; color: var(--gold); font-weight: bold; letter-spacing: 1px; }
-        input, button { padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
-        
-        /* Fixed Toggle Switch */
-        .switch-container { display: flex; align-items: center; gap: 10px; color: white; font-size: 13px; font-weight: bold; }
-        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        /* Toggle Switch */
+        .switch-container { display: flex; align-items: center; gap: 10px; color: white; font-size: 12px; font-weight: bold; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .3s; border-radius: 24px; border: 1px solid var(--gold); }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--green); border-color: var(--green); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #333; transition: .3s; border-radius: 22px; border: 1px solid var(--gold); }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 4px; bottom: 3px; background: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background: var(--green); border-color: var(--green); }
+        input:checked + .slider:before { transform: translateX(22px); }
 
-        .btn-main { background: var(--gold); color: black; font-weight: bold; cursor: pointer; border: none; min-width: 180px; }
-        .btn-main:hover { background: #e0a816; }
-        
-        #map { flex-grow: 1; width: 100%; }
-        
-        #results-container { display: flex; height: 320px; background: white; border-top: 1px solid #ccc; }
+        /* Panels */
         #incident-feed { flex: 2; overflow-y: auto; border-right: 1px solid #ddd; padding: 15px; }
-        #deep-search-panel { flex: 1; overflow-y: auto; background: #f4f4f4; padding: 15px; }
+        #web-leads { flex: 1.2; overflow-y: auto; background: #f8f9fa; padding: 15px; }
+        .section-title { font-size: 12px; font-weight: 900; color: var(--cobalt); border-bottom: 2px solid var(--cobalt); margin-bottom: 12px; padding-bottom: 4px; display: flex; justify-content: space-between; }
 
-        .section-title { font-size: 13px; font-weight: bold; border-bottom: 2px solid var(--cobalt); margin-bottom: 10px; padding-bottom: 5px; color: var(--cobalt); }
-
-        .event-card { 
-            border-bottom: 1px solid #eee; padding: 12px; display: flex; flex-direction: column; 
-            text-decoration: none; color: #222; transition: 0.2s; border-radius: 4px; margin-bottom: 5px;
-        }
-        .event-card:hover { background: #fffde7; }
-        
-        .event-title { font-weight: bold; font-size: 1.1em; }
+        .item-card { border-bottom: 1px solid #eee; padding: 12px; display: flex; flex-direction: column; text-decoration: none; color: inherit; transition: 0.2s; }
+        .item-card:hover { background: #fffde7; }
+        .item-title { font-weight: bold; font-size: 1.1em; margin-bottom: 3px; }
         .type-incident { color: var(--danger); }
         .type-landmark { color: var(--green); }
-        .meta { font-size: 11px; color: #666; margin-top: 4px; font-family: monospace; }
+        .item-meta { font-size: 11px; color: #666; font-family: monospace; }
         
-        .dossier-link { display: block; padding: 8px; background: white; color: #333; text-decoration: none; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
+        .lead-link { display: block; padding: 10px; background: white; color: #1a0dab; text-decoration: none; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; margin-bottom: 8px; font-weight: 500; }
+        .lead-link:hover { border-color: var(--cobalt); background: #eee; }
+        .lead-tag { font-size: 9px; background: #eee; padding: 2px 5px; border-radius: 3px; color: #444; margin-right: 5px; }
 
-        #loader { display: none; color: var(--gold); font-size: 13px; font-weight: bold; margin-left: 10px; }
+        #loader { display: none; color: var(--gold); font-size: 13px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <div class="input-group" style="flex: 1;">
-        <label>1. Location (Australia)</label>
+    <div class="input-group" style="flex: 2;">
+        <label>1. Target Location (Australia)</label>
         <div style="display: flex; gap: 5px;">
-            <input type="text" id="addressInput" placeholder="Suburb, City or Town" style="flex:1">
-            <button onclick="searchAddress()">Set Map</button>
+            <input type="text" id="addressInput" placeholder="Enter Suburb, City, or Specific Street" style="flex:1">
+            <button onclick="searchAddress()" style="cursor:pointer; background:#333; color:white;">Set Coordinates</button>
         </div>
     </div>
     <div class="input-group">
@@ -77,44 +65,44 @@
         <input type="range" id="radius" min="1" max="50" value="5">
     </div>
     <div class="input-group">
-        <label>3. Timeline</label>
+        <label>3. Year Range</label>
         <div style="display: flex; gap: 5px;">
-            <input type="number" id="startYear" value="1900" style="width:70px">
-            <input type="number" id="endYear" value="2000" style="width:70px">
+            <input type="number" id="startYear" value="1900" style="width:75px">
+            <input type="number" id="endYear" value="2000" style="width:75px">
         </div>
     </div>
-    <button class="btn-main" onclick="executeInquiry()">SEARCH HISTORY</button>
+    <button class="btn-main" onclick="executeInquiry()">DEEP INTEL SEARCH</button>
 </div>
 
 <div id="settings-bar">
     <div class="switch-container">
-        <span>EXCLUDE LANDMARKS</span>
+        <span>INCIDENTS ONLY</span>
         <label class="switch">
             <input type="checkbox" id="landmarkToggle">
             <span class="slider"></span>
         </label>
         <span>INCLUDE LANDMARKS</span>
     </div>
-    <div id="loader">SEARCHING ARCHIVES...</div>
+    <div id="loader">SEARCHING WIKIPEDIA, WIKIDATA & WEB ARCHIVES...</div>
 </div>
 
 <div id="map"></div>
 
 <div id="results-container">
     <div id="incident-feed">
-        <div class="section-title">CHRONOLOGICAL INCIDENT FEED</div>
-        <div id="listContent" style="color: #666; font-style: italic;">Select a location and click Search.</div>
+        <div class="section-title">CHRONOLOGICAL DATABASE MATCHES</div>
+        <div id="listContent" style="color: #666; font-style: italic;">No search active. Enter location to begin inquiry.</div>
     </div>
-    <div id="deep-search-panel">
-        <div class="section-title">EXTERNAL NEWS DOSSIERS</div>
-        <div id="dossierLinks"></div>
+    <div id="web-leads">
+        <div class="section-title">EXTERNAL INVESTIGATION LEADS</div>
+        <div id="leadLinks"></div>
     </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    let currentCity = "Australia";
+    let currentPlaceName = "Australia";
     const map = L.map('map').setView([-37.8136, 144.9631], 12); 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -122,10 +110,11 @@
 
     async function searchAddress() {
         const query = document.getElementById('addressInput').value;
+        if(!query) return;
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Australia")}`);
         const data = await res.json();
         if (data.length > 0) {
-            currentCity = data[0].display_name.split(',')[0];
+            currentPlaceName = data[0].display_name.split(',')[0];
             updateSelection(parseFloat(data[0].lat), parseFloat(data[0].lon), 14);
         }
     }
@@ -139,7 +128,7 @@
             circle.setRadius(radiusVal * 1000);
         } else {
             pin = L.marker([lat, lng], {draggable: true}).addTo(map);
-            circle = L.circle([lat, lng], { radius: radiusVal * 1000, color: '#f1b51c', fillOpacity: 0.1 }).addTo(map);
+            circle = L.circle([lat, lng], { radius: radiusVal * 1000, color: '#ffca28', fillOpacity: 0.1, weight: 2 }).addTo(map);
         }
     }
 
@@ -150,38 +139,35 @@
     };
 
     async function executeInquiry() {
-        if (!pin) return alert("Please place a marker on the map first.");
+        if (!pin) return alert("Select a location on the map first.");
         
         const {lat, lng} = pin.getLatLng();
         const rad = document.getElementById('radius').value;
         const start = document.getElementById('startYear').value;
         const end = document.getElementById('endYear').value;
-        const includeLandmarks = document.getElementById('landmarkToggle').checked;
+        const landmarks = document.getElementById('landmarkToggle').checked;
 
         document.getElementById('loader').style.display = "block";
         document.getElementById('listContent').innerHTML = "";
         eventMarkers.clearLayers();
 
-        generateDossiers(currentCity, start, end);
+        // 1. Generate Investigation Dossiers
+        generateWebDossiers(currentPlaceName, start, end);
 
-        // Fetch Data
-        await fetchWikidata(lat, lng, rad, start, end, includeLandmarks);
-        
-        // Only fetch Wikipedia geodata if landmarks are requested
-        if (includeLandmarks) {
-            await fetchWikipediaLandmarks(lat, lng, rad);
-        }
+        // 2. Multi-threaded Search
+        const tasks = [
+            fetchWikidata(lat, lng, rad, start, end, landmarks),
+            fetchWikipediaChronology(currentPlaceName, start, end)
+        ];
 
+        await Promise.all(tasks);
         document.getElementById('loader').style.display = "none";
     }
 
     async function fetchWikidata(lat, lng, rad, start, end, includeLandmarks) {
-        // Incident Types (Crimes, Accidents, etc)
         let incidentTypes = "wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q1543115 wd:Q3839 wd:Q214841 wd:Q132241";
-        // Landmark Types (Memorials, Monuments, Historic Sites)
         let landmarkTypes = "wd:Q1081138 wd:Q84015776 wd:Q575759 wd:Q49833 wd:Q3013894";
-        
-        let typeValues = includeLandmarks ? (incidentTypes + " " + landmarkTypes) : incidentTypes;
+        let types = includeLandmarks ? (incidentTypes + " " + landmarkTypes) : incidentTypes;
 
         const query = `
         SELECT DISTINCT ?event ?eventLabel ?date ?location ?article ?type WHERE {
@@ -191,86 +177,8 @@
             bd:serviceParam wikibase:radius "${rad}" .
           }
           ?event wdt:P31/wdt:P279* ?type .
-          VALUES ?type { ${typeValues} }
-          MINUS { ?event wdt:P31/wdt:P279* wd:Q300920 } # Exclude Sports
-          
+          VALUES ?type { ${types} }
+          MINUS { ?event wdt:P31/wdt:P279* wd:Q300920 } # No Sport
           OPTIONAL { ?event wdt:P585 ?date . }
-          
-          # Date Filter
           FILTER(!BOUND(?date) || (YEAR(?date) >= ${start} && YEAR(?date) <= ${end}))
-          
-          SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-          OPTIONAL {
-            ?article schema:about ?event .
-            ?article schema:inLanguage "en" .
-            FILTER (SUBSTR(str(?article), 1, 25) = "https://en.wikipedia.org/")
-          }
-        } LIMIT 100`;
-
-        try {
-            const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
-            const data = await res.json();
-            data.results.bindings.forEach(row => {
-                const isLandmark = ["Q1081138","Q84015776","Q575759","Q49833","Q3013894"].some(q => row.type.value.includes(q));
-                
-                // Final gate: If landmarks are OFF, do not show items flagged as landmarks
-                if (!includeLandmarks && isLandmark) return;
-
-                addEventToFeed(
-                    row.eventLabel.value, 
-                    row.date ? new Date(row.date.value).getFullYear() : "Ongoing", 
-                    row.article ? row.article.value : row.event.value, 
-                    isLandmark ? "Landmark/Site" : "Historical Incident", 
-                    row.location.value,
-                    isLandmark
-                );
-            });
-        } catch(e) { console.error(e); }
-    }
-
-    async function fetchWikipediaLandmarks(lat, lng, rad) {
-        let url = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gsradius=${rad*1000}&gscoord=${lat}|${lng}&format=json&origin=*`;
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            if (data.query && data.query.geosearch) {
-                data.query.geosearch.forEach(page => {
-                    addEventToFeed(page.title, "Landmark", `https://en.wikipedia.org/?curid=${page.pageid}`, "Wikipedia Site", `Point(${page.lon} ${page.lat})`, true);
-                });
-            }
-        } catch(e) {}
-    }
-
-    function addEventToFeed(title, year, url, type, locStr, isLandmark) {
-        const coords = locStr.replace("Point(","").replace(")","").split(" ");
-        const markerColor = isLandmark ? '#2d6a4f' : '#b71c1c';
-        
-        L.circleMarker([coords[1], coords[0]], {
-            radius: 7, fillColor: markerColor, color: "#000", weight: 1, opacity: 1, fillOpacity: 0.9
-        }).addTo(eventMarkers).bindPopup(`<b>${title}</b><br>${year}<br><a href="${url}" target="_blank">View Record</a>`);
-
-        const card = document.createElement('a');
-        card.className = 'event-card';
-        card.href = url; card.target = "_blank";
-        
-        const titleClass = isLandmark ? 'type-landmark' : 'type-incident';
-        card.innerHTML = `<div class="event-title ${titleClass}">${title}</div><div class="meta">${type} | ${year}</div>`;
-        document.getElementById('listContent').appendChild(card);
-    }
-
-    function generateDossiers(place, start, end) {
-        const dossierBox = document.getElementById('dossierLinks');
-        dossierBox.innerHTML = "";
-        const queries = [
-            { label: "🌐 General Web Inquiry", url: `https://www.google.com/search?q=${place}+historical+crimes+accidents+celebrations+${start}..${end}` },
-            { label: "🇦🇺 Trove Digitised Newspapers", url: `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${place}&dateFrom=${start}-01-01&dateTo=${end}-12-31` }
-        ];
-        queries.forEach(q => {
-            const link = document.createElement('a');
-            link.className = 'dossier-link'; link.href = q.url; link.target = "_blank"; link.innerText = q.label;
-            dossierBox.appendChild(link);
-        });
-    }
-</script>
-</body>
-</html>
+          SERVICE wikibase:label { bd:serviceParam wikibase:language "en".
