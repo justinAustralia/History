@@ -3,11 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AU History Archive: 1900-2000</title>
+    <title>AU History Explorer: 1900-2000</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --au-green: #1b3022; --au-gold: #ffca28; --paper: #f4f1ea; }
-        body { margin: 0; font-family: 'Georgia', serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); }
+        :root { 
+            --au-green: #1b3022; 
+            --au-gold: #ffca28; 
+            --text-dark: #333;
+            --bg-light: #fdfaf5;
+            --border-color: #a3b18a;
+        }
+        body { margin: 0; font-family: 'Georgia', serif; display: flex; flex-direction: column; height: 100vh; background: var(--bg-light); color: var(--text-dark); }
         
         #header { 
             padding: 15px 25px; background: var(--au-green); color: white; 
@@ -18,36 +24,37 @@
         .input-group { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 11px; text-transform: uppercase; color: var(--au-gold); font-family: sans-serif; font-weight: bold; }
         
-        input, button { padding: 10px; border-radius: 4px; border: 1px solid #344e41; font-size: 14px; }
-        .btn-main { background: var(--au-gold); color: black; font-weight: bold; cursor: pointer; border: none; font-family: sans-serif; }
-        .btn-main:hover { background: #ffd54f; }
+        input[type="text"], input[type="number"], button { padding: 10px; border-radius: 4px; border: 1px solid #344e41; font-size: 14px; }
+        input[type="text"], input[type="number"] { background: #fff; color: var(--text-dark); }
+        input[type="range"] { width: 100%; }
+
+        .btn-action { background: var(--au-gold); color: black; font-weight: bold; cursor: pointer; border: none; font-family: sans-serif; }
+        .btn-action:hover { background: #ffd54f; }
+        .btn-secondary { background: #588157; color: white; border: 1px solid #a3b18a; }
+        .btn-secondary:hover { background: #8aa489; }
+
 
         #map { flex-grow: 1; width: 100%; border-bottom: 3px solid var(--au-green); }
         
         #results-panel { height: 280px; display: flex; background: white; border-top: 1px solid #ccc; }
         
-        #event-list { flex: 2; overflow-y: auto; border-right: 1px solid #eee; padding: 10px; }
-        #archive-links { flex: 1; overflow-y: auto; padding: 15px; background: #f9f9f9; }
+        #event-list { flex: 2; overflow-y: auto; border-right: 1px solid #eee; padding: 15px; }
+        #archive-info { flex: 1; padding: 15px; background: #f0f4f1; border-left: 1px solid #a3b18a; }
 
         .event-card { 
             border-bottom: 1px solid #eee; padding: 12px; display: flex; flex-direction: column; 
-            text-decoration: none; color: #333; transition: 0.2s; cursor: pointer;
+            text-decoration: none; color: var(--text-dark); transition: background 0.2s; cursor: pointer;
         }
         .event-card:hover { background: #fffdf0; }
-        .event-title { font-weight: bold; color: #8b0000; font-size: 1.1em; }
+        .event-title { font-weight: bold; color: #2d6a4f; font-size: 1.1em; }
         
         .source-tag { font-size: 10px; font-family: sans-serif; padding: 2px 5px; border-radius: 3px; margin-right: 5px; background: #ddd; }
         .tag-wiki { background: #e1f5fe; color: #0288d1; }
-        .tag-trove { background: #fff3e0; color: #ef6c00; }
+        .tag-wikidata { background: #fff3e0; color: #ef6c00; }
 
-        .archive-btn { 
-            display: block; width: 100%; padding: 8px; margin-bottom: 8px; 
-            text-align: center; text-decoration: none; font-size: 12px;
-            border: 1px solid #ccc; border-radius: 4px; color: #333; background: white; font-family: sans-serif;
-        }
-        .archive-btn:hover { background: #eee; }
-        
-        #loader { display: none; color: var(--au-gold); font-size: 12px; font-family: sans-serif; }
+        #loader { display: none; color: var(--au-gold); font-size: 12px; font-family: sans-serif; margin-left: 10px; }
+        .info-text { font-size: 12px; color: #666; line-height: 1.5; }
+        .archive-button-container { margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -57,7 +64,7 @@
         <label>Australian Location</label>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="addressInput" placeholder="Suburb or City" style="flex:1">
-            <button onclick="searchAddress()">Go</button>
+            <button class="btn-secondary" onclick="searchAddress()">Go</button>
         </div>
     </div>
     <div class="input-group">
@@ -72,7 +79,7 @@
         </div>
     </div>
     <div class="input-group">
-        <button class="btn-main" onclick="runInquiry()">Search Archives</button>
+        <button class="btn-action" onclick="runInquiry()">Search History</button>
         <div id="loader">Consulting Wikidata & Trove...</div>
     </div>
 </div>
@@ -81,37 +88,51 @@
 
 <div id="results-panel">
     <div id="event-list">
-        <div style="padding:10px; color:#666;">Select a location on the map. Search results from Wikipedia and Wikidata will appear here.</div>
+        <h3 style="color: var(--au-green); margin-bottom: 10px;">Incidents (Wikipedia/Wikidata)</h3>
+        <p class="info-text">Select a location on the map to begin. Events like crimes, accidents, and important visits will appear here.</p>
     </div>
-    <div id="archive-links">
-        <label>Direct Newspaper Search</label>
-        <div id="troveButtons" style="margin-top:10px;">
-            <small>Set a location and click search to generate newspaper archive links.</small>
+    <div id="archive-info">
+        <h3 style="color: var(--au-green); margin-bottom: 10px;">Australian Newspaper Archives (Trove)</h3>
+        <p class="info-text">
+            For deeper research into local events, crimes, and reports, use the link below to search Australia's national digitised newspaper archive. 
+            This will open Trove with your selected location and year range pre-filled.
+        </p>
+        <div class="archive-button-container">
+            <button class="btn-action" onclick="openTroveSearch()" style="width:100%;">Open Trove Newspaper Search ↗</button>
         </div>
+        <p class="info-text" style="margin-top:15px;">
+            **Note:** This app searches structured data (Wikidata/Wikipedia). For specific news articles from "The Age" or "Sydney Morning Herald", 
+            Trove is your best resource as it aggregates these publications.
+        </p>
     </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    let currentPlaceName = "Australia";
-    const map = L.map('map').setView([-37.8136, 144.9631], 12); // Default Melbourne
+    let currentPlaceName = "Australia"; // Default for Trove search if no address entered
+    const map = L.map('map').setView([-34.9285, 138.6007], 12); // Default Adelaide
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let pin, circle, eventMarkers = L.layerGroup().addTo(map);
 
-    // Initial Geolocation
+    // Attempt to get user's current location on load
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => updateSelection(pos.coords.latitude, pos.coords.longitude, 13));
     }
 
     async function searchAddress() {
         const query = document.getElementById('addressInput').value;
+        if (!query) return;
+        
+        // Append ", Australia" to bias search results to Australia
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Australia")}`);
         const data = await res.json();
         if (data.length > 0) {
-            currentPlaceName = data[0].display_name.split(',')[0];
+            currentPlaceName = data[0].display_name.split(',')[0]; // Get the main place name for Trove
             updateSelection(parseFloat(data[0].lat), parseFloat(data[0].lon), 14);
+        } else {
+            alert("Location not found in Australia.");
         }
     }
 
@@ -124,7 +145,19 @@
         }
     }
 
-    map.on('click', e => updateSelection(e.latlng.lat, e.latlng.lng));
+    map.on('click', e => {
+        // When clicking, try to update currentPlaceName from reverse geocoding
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&zoom=10`)
+            .then(res => res.json())
+            .then(data => {
+                currentPlaceName = data.address.city || data.address.town || data.address.village || data.address.state || "Australia";
+                updateSelection(e.latlng.lat, e.latlng.lng);
+            })
+            .catch(() => {
+                currentPlaceName = "Australia"; // Fallback
+                updateSelection(e.latlng.lat, e.latlng.lng);
+            });
+    });
 
     document.getElementById('radius').oninput = (e) => {
         document.getElementById('radLabel').innerText = e.target.value;
@@ -140,14 +173,12 @@
         const end = document.getElementById('endYear').value;
 
         document.getElementById('loader').style.display = "block";
-        document.getElementById('event-list').innerHTML = "";
+        document.getElementById('event-list').innerHTML = `<p class="info-text">Searching Wikidata for events...</p>`;
         eventMarkers.clearLayers();
 
-        // 1. GENERATE DEEP LINKS FOR AUSTRALIAN NEWSPAPERS (TROVE)
-        generateTroveLinks(currentPlaceName, start, end);
-
-        // 2. WIKIDATA / WIKIPEDIA QUERY
+        // 1. WIKIDATA / WIKIPEDIA QUERY
         // Filters: Crimes, Accidents, Visits, Disasters. EXCLUDES Sports (Q300920).
+        // Added FILTER by country (Q408 for Australia) to narrow results, improving relevance.
         const query = `
         SELECT DISTINCT ?event ?eventLabel ?date ?location ?article WHERE {
           SERVICE wikibase:around {
@@ -156,10 +187,24 @@
             bd:serviceParam wikibase:radius "${rad}" .
           }
           ?event wdt:P585 ?date .
-          ?event wdt:P31/wdt:P279* ?type .
-          VALUES ?type { wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q3839 wd:Q214841 wd:Q1543115 wd:Q132241 }
-          MINUS { ?event wdt:P31/wdt:P279* wd:Q300920 } 
+          ?event wdt:P31/wdt:P279* ?type . # Type of event/incident
+          OPTIONAL { ?event wdt:P17 ?country . } # Get country if available
+          
+          VALUES ?type { 
+            wd:Q838948  # Crime
+            wd:Q171558  # Accident
+            wd:Q1100989 # State visit / Official visit
+            wd:Q3839    # Disaster
+            wd:Q214841  # Murder
+            wd:Q1543115 # Celebration (e.g. centenary, public holiday events)
+            wd:Q132241  # Festival (non-sports related, e.g. cultural)
+          }
+
+          MINUS { ?event wdt:P31/wdt:P279* wd:Q300920 } # Exclude Sports
+
           FILTER(YEAR(?date) >= ${start} && YEAR(?date) <= ${end})
+          FILTER(!BOUND(?country) || ?country = wd:Q408) # Filter for Australia if country is known, otherwise include.
+
           SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
           OPTIONAL {
             ?article schema:about ?event .
@@ -174,13 +219,16 @@
             const results = data.results.bindings;
 
             if (results.length === 0) {
-                document.getElementById('event-list').innerHTML = "<div style='padding:20px;'>No structured events found for this radius. Use the Archive links on the right for newspaper records.</div>";
+                document.getElementById('event-list').innerHTML = "<p class='info-text'>No structured events (crime, accident, visit, celebration) found in Wikipedia/Wikidata for this area and time. Try adjusting the radius/years, or use the Trove link for broader newspaper searches.</p>";
+            } else {
+                document.getElementById('event-list').innerHTML = ""; // Clear initial message
             }
 
             results.forEach(row => {
                 const c = row.location.value.replace("Point(","").replace(")","").split(" ");
                 const yr = new Date(row.date.value).getFullYear();
                 const wikiLink = row.article ? row.article.value : row.event.value;
+                const sourceTag = row.article ? `<span class="source-tag tag-wiki">Wikipedia</span>` : `<span class="source-tag tag-wikidata">Wikidata</span>`;
 
                 L.marker([c[1], c[0]]).addTo(eventMarkers).bindPopup(`<b>${row.eventLabel.value}</b><br>${yr}`);
 
@@ -190,33 +238,26 @@
                 card.target = "_blank";
                 card.innerHTML = `
                     <div class="event-title">${row.eventLabel.value}</div>
-                    <div style="margin-top:5px;">
-                        <span class="source-tag tag-wiki">${row.article ? 'Wikipedia' : 'Wikidata'}</span>
-                        <span style="font-size:12px; color:#666;">📅 ${yr}</span>
+                    <div style="margin-top:5px; font-size:12px; color:#666;">
+                        ${sourceTag} 📅 ${yr}
                     </div>
                 `;
                 document.getElementById('event-list').appendChild(card);
             });
         } catch (e) {
-            alert("Error fetching data.");
+            document.getElementById('event-list').innerHTML = "<p class='info-text' style='color:red;'>Error fetching structured event data. Please check your internet connection.</p>";
         } finally {
             document.getElementById('loader').style.display = "none";
         }
     }
 
-    function generateTroveLinks(place, start, end) {
+    // Function to open Trove search
+    function openTroveSearch() {
+        const start = document.getElementById('startYear').value;
+        const end = document.getElementById('endYear').value;
         const troveBase = "https://trove.nla.gov.au/search/advanced/category/newspaper";
-        const queryParams = `?keyword=${encodeURIComponent(place)}&dateFrom=${start}-01-01&dateTo=${end}-12-31`;
-        
-        const linksHtml = `
-            <p style="font-size:12px; margin-bottom:10px;">Searching newspapers for <b>${place}</b> (${start}-${end}):</p>
-            <a class="archive-btn" href="${troveBase}${queryParams}" target="_blank">🔍 All Trove Newspapers</a>
-            <a class="archive-btn" href="${troveBase}${queryParams}&l-title=13" target="_blank">🗞️ The Age (Melbourne)</a>
-            <a class="archive-btn" href="${troveBase}${queryParams}&l-title=35" target="_blank">🗞️ Sydney Morning Herald</a>
-            <a class="archive-btn" href="${troveBase}${queryParams}&l-title=11" target="_blank">🗞️ The Argus (Melbourne)</a>
-            <p style="font-size:10px; color:#777; margin-top:10px;">Note: Trove links include Accidents, Crimes, and Official Visits found in OCR text.</p>
-        `;
-        document.getElementById('troveButtons').innerHTML = linksHtml;
+        const queryParams = `?keyword=${encodeURIComponent(currentPlaceName)}&dateFrom=${start}-01-01&dateTo=${end}-12-31`;
+        window.open(troveBase + queryParams, "_blank");
     }
 </script>
 </body>
