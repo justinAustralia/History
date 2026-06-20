@@ -214,4 +214,15 @@
             { label: "👑 Visits & Ceremonies", q: `"${place}" (visit OR opening OR celebration OR ceremony OR royal)` }
         ];
         categories.forEach(cat => {
-            const group
+            const group = document.createElement('div'); group.className = 'mining-group';
+            group.innerHTML = `<div class="mining-title">${cat.label}</div>`;
+            const gLink = `https://www.google.com/search?q=${encodeURIComponent(cat.q + " " + s + ".." + e)}`;
+            const tLink = `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${encodeURIComponent(place + " " + cat.label.split(' ')[1])}&dateFrom=${s}-01-01&dateTo=${e}-12-31`;
+            group.innerHTML += `<a class="news-btn" href="${gLink}" target="_blank">Google Archive Search</a>`;
+            group.innerHTML += `<a class="news-btn" href="${tLink}" target="_blank">Trove Newspaper Deep Search</a>`;
+            container.appendChild(group);
+        });
+    }
+</script>
+</body>
+</html>
