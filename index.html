@@ -6,12 +6,12 @@
     <title>AU Historical Intelligence Portal</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --cobalt: #002147; --gold: #f1b51c; --paper: #fdfaf5; --danger: #b71c1c; }
+        :root { --cobalt: #002147; --gold: #f1b51c; --paper: #fdfaf5; --danger: #b71c1c; --green: #2d6a4f; }
         body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); }
         
         #header { 
             padding: 15px 25px; background: var(--cobalt); color: white; 
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px; align-items: end; box-shadow: 0 4px 10px rgba(0,0,0,0.4); z-index: 1001;
         }
 
@@ -19,13 +19,21 @@
         label { font-size: 11px; text-transform: uppercase; color: var(--gold); font-weight: bold; letter-spacing: 1px; }
         input, button { padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
         
+        /* Toggle Switch Styling */
+        .switch-group { flex-direction: row; align-items: center; gap: 10px; cursor: pointer; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--gold); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
         .btn-main { background: var(--gold); color: black; font-weight: bold; cursor: pointer; border: none; }
         .btn-main:hover { background: #e0a816; }
         
         #map { flex-grow: 1; width: 100%; border-bottom: 3px solid var(--cobalt); }
         
         #results-container { display: flex; height: 350px; background: white; border-top: 1px solid #ccc; }
-        
         #incident-feed { flex: 2; overflow-y: auto; border-right: 1px solid #ddd; padding: 15px; }
         #deep-search-panel { flex: 1; overflow-y: auto; background: #f4f4f4; padding: 15px; border-left: 1px solid #ccc; }
 
@@ -36,17 +44,14 @@
             text-decoration: none; color: #222; transition: 0.2s; cursor: pointer; border-radius: 4px;
         }
         .event-card:hover { background: #fffde7; border-left: 4px solid var(--danger); }
+        .event-card.landmark:hover { border-left-color: var(--green); }
+        
         .event-title { font-weight: bold; color: var(--danger); font-size: 1.1em; }
+        .landmark .event-title { color: var(--green); }
         .meta { font-size: 11px; color: #666; margin-top: 4px; font-family: monospace; }
         
-        .search-dossier { 
-            display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
-        }
-        .dossier-link { 
-            display: block; padding: 10px; background: white; color: #333; text-decoration: none;
-            border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-weight: 500;
-        }
-        .dossier-link:hover { background: #eee; border-color: var(--cobalt); }
+        .dossier-link { display: block; padding: 10px; background: white; color: #333; text-decoration: none; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
+        .dossier-link:hover { background: #eee; }
 
         #loader { display: none; color: var(--gold); font-size: 12px; margin-left: 10px; font-style: italic; }
     </style>
@@ -55,7 +60,7 @@
 
 <div id="header">
     <div class="input-group">
-        <label>Target Region (Australia)</label>
+        <label>Region Search</label>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="addressInput" placeholder="Suburb or Landmark" style="flex:1">
             <button onclick="searchAddress()" style="cursor:pointer">Go</button>
@@ -66,15 +71,22 @@
         <input type="range" id="radius" min="1" max="50" value="5">
     </div>
     <div class="input-group">
-        <label>Timeline Range</label>
+        <label>Timeline</label>
         <div style="display: flex; gap: 5px;">
             <input type="number" id="startYear" value="1900">
             <input type="number" id="endYear" value="2000">
         </div>
     </div>
+    <div class="input-group switch-group">
+        <label class="switch">
+            <input type="checkbox" id="landmarkToggle">
+            <span class="slider"></span>
+        </label>
+        <label style="cursor:pointer; color:white;">Include Landmarks</label>
+    </div>
     <div class="input-group">
         <button class="btn-main" onclick="executeInquiry()">Initiate Intelligence Search</button>
-        <div id="loader">Scanning Australian Archives...</div>
+        <div id="loader">Consulting Archives...</div>
     </div>
 </div>
 
@@ -83,14 +95,11 @@
 <div id="results-container">
     <div id="incident-feed">
         <div class="section-title">Detected Incidents & Historical Articles</div>
-        <div id="listContent" style="color: #666;">Set location and search to populate.</div>
+        <div id="listContent" style="color: #666;">Set location and search to begin.</div>
     </div>
     <div id="deep-search-panel">
-        <div class="section-title">News & Web Archive Dossiers</div>
-        <p style="font-size: 11px; color: #555;">External deep-links constructed for this region/timeline:</p>
-        <div id="dossierLinks" class="search-dossier">
-            <small>Pending inquiry...</small>
-        </div>
+        <div class="section-title">News Dossiers</div>
+        <div id="dossierLinks" class="search-dossier"><small>Pending inquiry...</small></div>
     </div>
 </div>
 
@@ -98,7 +107,7 @@
 
 <script>
     let currentCity = "Australia";
-    const map = L.map('map').setView([-37.8136, 144.9631], 12); // Default Melbourne
+    const map = L.map('map').setView([-37.8136, 144.9631], 12); 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let pin, circle, eventMarkers = L.layerGroup().addTo(map);
@@ -127,7 +136,6 @@
     }
 
     map.on('click', e => updateSelection(e.latlng.lat, e.latlng.lng));
-
     document.getElementById('radius').oninput = (e) => {
         document.getElementById('radLabel').innerText = e.target.value;
         if (circle) circle.setRadius(e.target.value * 1000);
@@ -135,103 +143,121 @@
 
     async function executeInquiry() {
         if (!pin) return alert("Select a target location.");
-        
         const {lat, lng} = pin.getLatLng();
         const rad = document.getElementById('radius').value;
         const start = document.getElementById('startYear').value;
         const end = document.getElementById('endYear').value;
+        const includeLandmarks = document.getElementById('landmarkToggle').checked;
 
         document.getElementById('loader').style.display = "block";
         document.getElementById('listContent').innerHTML = "";
         eventMarkers.clearLayers();
 
-        // 1. GENERATE DEEP SEARCH DOSSIERS (General Internet, Age, SMH, Trove)
         generateDossiers(currentCity, start, end);
 
-        // 2. PARALLEL SEARCH: WIKIDATA & WIKIPEDIA GEODATA
-        Promise.all([
-            fetchWikidata(lat, lng, rad, start, end),
-            fetchWikipediaNearby(lat, lng, rad)
-        ]).then(() => {
+        const tasks = [fetchWikidata(lat, lng, rad, start, end, includeLandmarks)];
+        if (includeLandmarks) {
+            tasks.push(fetchWikipediaNearby(lat, lng, rad, true)); // Request only landmarks
+        } else {
+            tasks.push(fetchWikipediaNearby(lat, lng, rad, false)); // Standard search
+        }
+
+        Promise.all(tasks).then(() => {
             document.getElementById('loader').style.display = "none";
         });
     }
 
-    async function fetchWikidata(lat, lng, rad, start, end) {
+    async function fetchWikidata(lat, lng, rad, start, end, includeLandmarks) {
+        let typeValues = "wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q1543115 wd:Q3839 wd:Q214841 wd:Q132241";
+        if (includeLandmarks) {
+            // Add Landmark types: Historic Site, Landmark, Memorial, Monument, "Big Thing"
+            typeValues += " wd:Q1081138 wd:Q84015776 wd:Q575759 wd:Q49833 wd:Q3013894";
+        }
+
         const query = `
-        SELECT DISTINCT ?event ?eventLabel ?date ?location ?article WHERE {
+        SELECT DISTINCT ?event ?eventLabel ?date ?location ?article ?type WHERE {
           SERVICE wikibase:around {
             ?event wdt:P625 ?location .
             bd:serviceParam wikibase:center "Point(${lng} ${lat})"^^geo:wktLiteral .
             bd:serviceParam wikibase:radius "${rad}" .
           }
-          ?event wdt:P585 ?date .
           ?event wdt:P31/wdt:P279* ?type .
-          VALUES ?type { wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q1543115 wd:Q3839 wd:Q214841 wd:Q132241 }
+          VALUES ?type { ${typeValues} }
           MINUS { ?event wdt:P31/wdt:P279* wd:Q300920 } 
-          FILTER(YEAR(?date) >= ${start} && YEAR(?date) <= ${end})
+          
+          OPTIONAL { ?event wdt:P585 ?date . } # Incidents have dates
+          
+          # If not including landmarks, strictly filter for events with dates in range
+          ${includeLandmarks ? '' : 'FILTER(YEAR(?date) >= ' + start + ' && YEAR(?date) <= ' + end + ')'}
+          
           SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
           OPTIONAL {
             ?article schema:about ?event .
             ?article schema:inLanguage "en" .
             FILTER (SUBSTR(str(?article), 1, 25) = "https://en.wikipedia.org/")
           }
-        } ORDER BY DESC(?date) LIMIT 100`;
+        } LIMIT 150`;
 
         const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
         const data = await res.json();
         
         data.results.bindings.forEach(row => {
-            addEventToFeed(row.eventLabel.value, new Date(row.date.value).getFullYear(), row.article ? row.article.value : row.event.value, "Wikidata/Wikipedia Incident", row.location.value);
+            const isLandmark = ["Q1081138","Q84015776","Q575759","Q49833","Q3013894"].some(q => row.type.value.includes(q));
+            addEventToFeed(
+                row.eventLabel.value, 
+                row.date ? new Date(row.date.value).getFullYear() : "Permanent", 
+                row.article ? row.article.value : row.event.value, 
+                isLandmark ? "AU Landmark/Site" : "Historical Incident", 
+                row.location.value,
+                isLandmark
+            );
         });
     }
 
-    async function fetchWikipediaNearby(lat, lng, rad) {
-        // Geosearch for general Wikipedia historical/place articles nearby
-        const url = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gsradius=${rad*1000}&gscoord=${lat}|${lng}&format=json&origin=*`;
+    async function fetchWikipediaNearby(lat, lng, rad, onlyLandmarks) {
+        let url = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gsradius=${rad*1000}&gscoord=${lat}|${lng}&format=json&origin=*&gsprop=type`;
         const res = await fetch(url);
         const data = await res.json();
         
         if (data.query && data.query.geosearch) {
             data.query.geosearch.forEach(page => {
-                // Filter out obviously non-historical pages or keep all for "context"
-                addEventToFeed(page.title, "Various", `https://en.wikipedia.org/?curid=${page.pageid}`, "Wikipedia Geolocation Match", `Point(${page.lon} ${page.lat})`);
+                const isLandmark = page.type === 'landmark';
+                if (onlyLandmarks && !isLandmark) return;
+                addEventToFeed(page.title, "Place Info", `https://en.wikipedia.org/?curid=${page.pageid}`, "Wikipedia Geolocation", `Point(${page.lon} ${page.lat})`, isLandmark);
             });
         }
     }
 
-    function addEventToFeed(title, year, url, type, locStr) {
+    function addEventToFeed(title, year, url, type, locStr, isLandmark) {
         const coords = locStr.replace("Point(","").replace(")","").split(" ");
-        L.marker([coords[1], coords[0]]).addTo(eventMarkers).bindPopup(`<b>${title}</b><br>${year}`);
+        const markerColor = isLandmark ? '#2d6a4f' : '#b71c1c';
+        
+        L.circleMarker([coords[1], coords[0]], {
+            radius: 8,
+            fillColor: markerColor,
+            color: "#000",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).addTo(eventMarkers).bindPopup(`<b>${title}</b><br>${year}`);
 
         const card = document.createElement('a');
-        card.className = 'event-card';
-        card.href = url;
-        card.target = "_blank";
-        card.innerHTML = `
-            <div class="event-title">${title}</div>
-            <div class="meta">SOURCE: ${type} | YEAR: ${year}</div>
-        `;
+        card.className = 'event-card' + (isLandmark ? ' landmark' : '');
+        card.href = url; card.target = "_blank";
+        card.innerHTML = `<div class="event-title">${title}</div><div class="meta">${type} | ${year}</div>`;
         document.getElementById('listContent').appendChild(card);
     }
 
     function generateDossiers(place, start, end) {
         const dossierBox = document.getElementById('dossierLinks');
         dossierBox.innerHTML = "";
-
         const queries = [
-            { label: "🌐 General Web Search (Crimes/Events)", url: `https://www.google.com/search?q=${place}+historical+crimes+accidents+celebrations+${start}..${end}` },
-            { label: "🗞️ The Age (1900-2000 Archive)", url: `https://www.google.com/search?q=site:theage.com.au+${place}+${start}..${end}` },
-            { label: "🗞️ SMH (1900-2000 Archive)", url: `https://www.google.com/search?q=site:smh.com.au+${place}+${start}..${end}` },
-            { label: "🇦🇺 Trove Advanced Search (AU Newspapers)", url: `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${place}&dateFrom=${start}-01-01&dateTo=${end}-12-31` }
+            { label: "🌐 General Search", url: `https://www.google.com/search?q=${place}+historical+crimes+accidents+celebrations+${start}..${end}` },
+            { label: "🇦🇺 Trove Newspapers", url: `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${place}&dateFrom=${start}-01-01&dateTo=${end}-12-31` }
         ];
-
         queries.forEach(q => {
             const link = document.createElement('a');
-            link.className = 'dossier-link';
-            link.href = q.url;
-            link.target = "_blank";
-            link.innerText = q.label;
+            link.className = 'dossier-link'; link.href = q.url; link.target = "_blank"; link.innerText = q.label;
             dossierBox.appendChild(link);
         });
     }
