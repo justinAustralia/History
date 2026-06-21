@@ -6,12 +6,18 @@
     <title>AU History Forensic Portal</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --cobalt: #001f3f; --gold: #ffca28; --paper: #fdfaf5; --danger: #b71c1c; --green: #2e7d32; }
+        :root { 
+            --cobalt: #001f3f; 
+            --gold: #ffca28; 
+            --paper: #fdfaf5; 
+            --incident-red: #b71c1c; 
+            --landmark-green: #2e7d32; 
+            --ems-blue: #0d47a1;
+        }
         
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); color: #333; }
+        body { margin: 0; font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); color: #333; }
         
-        /* Responsive Header */
         #header { 
             padding: 12px; background: var(--cobalt); color: white; 
             display: grid; grid-template-columns: 1fr; gap: 12px;
@@ -23,12 +29,9 @@
 
         .input-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 10px; text-transform: uppercase; color: var(--gold); font-weight: bold; }
-        
         input, button { padding: 12px; border-radius: 6px; border: 1px solid #444; font-size: 14px; width: 100%; }
-        input[type="range"] { padding: 5px 0; }
         
-        .btn-main { background: var(--gold); color: #000; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
-        .btn-main:active { transform: scale(0.98); background: #e0a816; }
+        .btn-main { background: var(--gold); color: #000; font-weight: bold; cursor: pointer; border: none; }
 
         #settings-bar { 
             background: #00152b; padding: 10px 15px; display: flex; 
@@ -36,42 +39,48 @@
             border-bottom: 2px solid var(--gold); z-index: 1000; 
         }
         
-        /* Layout: Map vs Results */
-        #map { flex: 0 0 40vh; width: 100%; position: relative; }
+        #map { flex: 0 0 35vh; width: 100%; position: relative; }
         @media (min-width: 768px) { #map { flex: 1; } }
         
-        #results-container { 
-            display: flex; flex-direction: column; background: white; 
-            border-top: 1px solid #ccc; overflow-y: auto; 
-        }
-        @media (min-width: 768px) { 
-            #results-container { flex-direction: row; height: 350px; overflow: hidden; } 
-        }
+        #results-container { display: flex; flex-direction: column; background: white; overflow-y: auto; }
+        @media (min-width: 768px) { #results-container { flex-direction: row; height: 400px; overflow: hidden; } }
 
         #incident-feed { flex: 1.8; overflow-y: auto; border-bottom: 1px solid #ddd; padding: 15px; }
-        #news-archive { flex: 1.2; overflow-y: auto; background: #f4f4f4; padding: 15px; }
+        #news-archive { flex: 1.2; overflow-y: auto; background: #f1f3f5; padding: 15px; }
         @media (min-width: 768px) { #incident-feed { border-bottom: none; border-right: 1px solid #ddd; } }
 
         .section-title { font-size: 11px; font-weight: 900; color: var(--cobalt); border-bottom: 2px solid var(--cobalt); margin-bottom: 12px; padding-bottom: 4px; text-transform: uppercase; }
         
         /* Event Cards */
-        .item-card { border-bottom: 1px solid #eee; padding: 14px 10px; display: block; text-decoration: none; color: inherit; position: relative; }
-        .item-title { font-weight: bold; font-size: 15px; color: var(--danger); margin-bottom: 4px; padding-right: 60px; line-height: 1.3; }
-        .type-tag { position: absolute; top: 14px; right: 10px; font-size: 9px; font-weight: bold; background: #ddd; padding: 3px 6px; border-radius: 4px; }
-        .item-meta { font-size: 11px; color: #666; font-family: monospace; }
+        .item-card { border-bottom: 1px solid #eee; padding: 16px 12px; display: block; text-decoration: none; color: inherit; position: relative; transition: background 0.1s; }
+        .item-card:hover { background: #fffde7; }
+        
+        .item-title { font-weight: 800; font-size: 15px; margin-bottom: 6px; padding-right: 85px; line-height: 1.3; }
+        .item-card.type-incident .item-title { color: var(--incident-red); }
+        .item-card.type-landmark .item-title { color: var(--landmark-green); }
+        .item-card.type-ems .item-title { color: var(--ems-blue); }
 
-        /* News Links */
+        .status-badge { position: absolute; top: 16px; right: 12px; font-size: 8px; font-weight: 900; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; text-align: center; width: 75px; }
+        .item-card.type-incident .status-badge { background: #ffebee; color: var(--incident-red); border: 1px solid var(--incident-red); }
+        .item-card.type-landmark .status-badge { background: #e8f5e9; color: var(--landmark-green); border: 1px solid var(--landmark-green); }
+        .item-card.type-ems .status-badge { background: #e3f2fd; color: var(--ems-blue); border: 1px solid var(--ems-blue); }
+
+        .item-meta { font-size: 11px; color: #555; display: flex; align-items: center; gap: 8px; font-family: monospace; }
+
+        /* News & Social links */
         .news-group { margin-bottom: 20px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #ccc; }
-        .news-group h4 { margin: 0 0 10px 0; font-size: 13px; color: var(--cobalt); border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .news-btn { display: block; padding: 12px; background: #fdfdfd; color: #004a99; text-decoration: none; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; margin-bottom: 8px; font-weight: bold; text-align: center; }
+        .news-group h4 { margin: 0 0 10px 0; font-size: 13px; color: var(--cobalt); border-bottom: 1px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between; }
+        .social-btn { display: inline-block; padding: 8px 12px; background: #fff; color: #333; text-decoration: none; border: 1px solid #ddd; border-radius: 6px; font-size: 11px; margin: 2px; font-weight: bold; }
+        .social-btn:hover { border-color: var(--gold); background: #fdfdfd; }
+        .news-btn { display: block; padding: 12px; background: #fff; color: #004a99; text-decoration: none; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; margin-bottom: 8px; font-weight: bold; text-align: center; }
 
-        /* Toggle */
+        /* Toggle Switch */
         .switch-container { display: flex; align-items: center; gap: 8px; color: white; font-size: 11px; font-weight: bold; }
         .switch { position: relative; width: 40px; height: 22px; display: inline-block; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #333; transition: .3s; border-radius: 22px; border: 1px solid var(--gold); }
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 2px; background: white; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background: var(--green); }
+        input:checked + .slider { background: var(--landmark-green); }
         input:checked + .slider:before { transform: translateX(18px); }
 
         #loader { display: none; color: var(--gold); font-size: 12px; font-weight: bold; }
@@ -84,7 +93,7 @@
         <label>Investigation Site (AU)</label>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="addressInput" placeholder="Suburb or Town">
-            <button onclick="searchAddress()" style="background:#333; color:white; width: auto;">GO</button>
+            <button onclick="searchAddress()" style="background:#333; color:white; width: auto; cursor:pointer;">GO</button>
         </div>
     </div>
     <div class="input-group">
@@ -92,7 +101,7 @@
         <input type="range" id="radius" min="1" max="50" value="5">
     </div>
     <div class="input-group">
-        <label>Year Range</label>
+        <label>Timeline</label>
         <div style="display: flex; gap: 5px;">
             <input type="number" id="startYear" value="1900">
             <input type="number" id="endYear" value="2000">
@@ -108,20 +117,22 @@
             <input type="checkbox" id="landmarkToggle">
             <span class="slider"></span>
         </label>
-        <span>INCLUDE</span>
+        <span>INCLUDE LANDMARKS</span>
     </div>
-    <div id="loader">SEARCHING...</div>
+    <div id="loader">QUERYING ARCHIVES...</div>
 </div>
 
 <div id="map"></div>
 
 <div id="results-container">
     <div id="incident-feed">
-        <div class="section-title">Historical Records</div>
-        <div id="listContent" style="color:#888; font-size:13px; text-align: center; padding-top: 20px;">Move pin and search.</div>
+        <div class="section-title">Historical Intelligence Feed</div>
+        <div id="listContent" style="color:#888; font-size:13px; text-align: center; padding-top: 30px;">
+            Select a location to begin investigation.
+        </div>
     </div>
     <div id="news-archive">
-        <div class="section-title">Newspaper Investigation Leads</div>
+        <div class="section-title">External Intelligence Dossiers</div>
         <div id="newsLeads"></div>
     </div>
 </div>
@@ -129,7 +140,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    let localSuburbs = [];
+    let currentSuburbNames = [];
     const map = L.map('map').setView([-37.81, 144.96], 12); 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -183,25 +194,27 @@
         document.getElementById('newsLeads').innerHTML = "";
         markers.clearLayers();
 
-        localSuburbs = await getSuburbs(lat, lng, rad);
-        generateNewsDossiers(localSuburbs, start, end);
+        currentSuburbNames = await getSuburbs(lat, lng, rad);
+        generateInvestigationLeads(currentSuburbNames, start, end);
 
         await Promise.all([
-            fetchWikidataEvents(lat, lng, rad, start, end, showLandmarks),
-            ...localSuburbs.slice(0, 3).map(s => fetchWikipediaEvents(s, start, end))
+            fetchWikidata(lat, lng, rad, start, end, showLandmarks),
+            ...currentSuburbNames.slice(0, 3).map(s => fetchWikipediaText(s, start, end)),
+            showLandmarks ? fetchWikipediaGeo(lat, lng, rad) : Promise.resolve()
         ]);
 
         document.getElementById('loader').style.display = "none";
-        // Smooth scroll to results on mobile
         if (window.innerWidth < 768) {
             document.getElementById('results-container').scrollIntoView({ behavior: 'smooth' });
         }
     }
 
-    async function fetchWikidataEvents(lat, lng, rad, s, e, showL) {
+    async function fetchWikidata(lat, lng, rad, s, e, showL) {
         const incidents = "wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q1543115 wd:Q3839 wd:Q214841 wd:Q132241";
-        const landmarks = "wd:Q1081138 wd:Q575759 wd:Q49833";
-        const types = showL ? (incidents + " " + landmarks) : incidents;
+        const landmarks = "wd:Q1081138 wd:Q575759 wd:Q49833 wd:Q84015776";
+        const ems = "wd:Q1195642 wd:Q861954 wd:Q16917 wd:Q14917480"; // Fire, Police, Hospital, Ambulance
+        
+        const types = showL ? (incidents + " " + landmarks + " " + ems) : (incidents + " " + ems);
 
         const query = `SELECT DISTINCT ?item ?itemLabel ?date ?loc ?type WHERE {
             SERVICE wikibase:around {
@@ -215,19 +228,20 @@
             ?item wdt:P585|wdt:P580 ?date .
             FILTER(YEAR(?date) >= ${s} && YEAR(?date) <= ${e})
             SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-        } LIMIT 50`;
+        } LIMIT 100`;
 
         try {
             const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
             const data = await res.json();
             data.results.bindings.forEach(row => {
-                const isL = ["Q1081138","Q575759","Q49833"].some(q => row.type.value.includes(q));
-                renderItem(row.itemLabel.value, new Date(row.date.value).getFullYear(), row.item.value, isL, row.loc.value, "MAPPED");
+                const isL = ["Q1081138","Q575759","Q49833","Q84015776"].some(q => row.type.value.includes(q));
+                const isE = ["Q1195642","Q861954","Q16917","Q14917480"].some(q => row.type.value.includes(q));
+                renderItem(row.itemLabel.value, new Date(row.date.value).getFullYear(), row.item.value, isL, isE, row.loc.value);
             });
         } catch(e) {}
     }
 
-    async function fetchWikipediaEvents(suburb, s, e) {
+    async function fetchWikipediaText(suburb, s, e) {
         const query = `"${suburb}" (murder OR crime OR accident OR disaster OR visit) -sport`;
         const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
         try {
@@ -236,50 +250,79 @@
             data.query.search.forEach(item => {
                 const yearMatch = item.snippet.match(/\b(19\d{2}|2000)\b/);
                 if (yearMatch) {
-                    renderItem(item.title, yearMatch[0], `https://en.wikipedia.org/?curid=${item.pageid}`, false, null, "WIKI");
+                    renderItem(item.title, yearMatch[0], `https://en.wikipedia.org/?curid=${item.pageid}`, false, false, null);
                 }
             });
         } catch(e) {}
     }
 
-    function renderItem(title, yr, url, isL, locStr, source) {
+    async function fetchWikipediaGeo(lat, lng, rad) {
+        const url = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gsradius=${rad*1000}&gscoord=${lat}|${lng}&format=json&origin=*`;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.query && data.query.geosearch) {
+                data.query.geosearch.forEach(page => {
+                    renderItem(page.title, "Verified Site", `https://en.wikipedia.org/?curid=${page.pageid}`, true, false, `Point(${page.lon} ${page.lat})`);
+                });
+            }
+        } catch(e) {}
+    }
+
+    function renderItem(title, yr, url, isLandmark, isEMS, locStr) {
+        let typeClass = 'type-incident';
+        let typeLabel = 'Incident';
+        let markerColor = '#b71c1c';
+
+        if (isLandmark) {
+            typeClass = 'type-landmark';
+            typeLabel = 'Historic Site';
+            markerColor = '#2e7d32';
+        } else if (isEMS) {
+            typeClass = 'type-ems';
+            typeLabel = 'Emergency Site';
+            markerColor = '#0d47a1';
+        }
+
         if (locStr) {
             const c = locStr.replace("Point(","").replace(")","").split(" ");
             L.circleMarker([c[1], c[0]], { 
-                radius: 8, fillColor: isL ? '#2e7d32' : '#b71c1c', color: '#000', weight: 1, fillOpacity: 0.8 
+                radius: 8, fillColor: markerColor, color: "#000", weight: 1, fillOpacity: 0.8 
             }).addTo(markers).bindPopup(`<b>${title}</b><br>${yr}`);
         }
 
         const card = document.createElement('a');
-        card.className = 'item-card'; card.href = url; card.target = "_blank";
+        card.className = `item-card ${typeClass}`; 
+        card.href = url; card.target = "_blank";
         card.innerHTML = `
             <div class="item-title">${title}</div>
-            <div class="type-tag" style="background:${source === 'MAPPED' ? '#e3f2fd' : '#fff9c4'}">${source}</div>
-            <div class="item-meta">YEAR: ${yr} | ${isL ? 'LANDMARK' : 'INCIDENT'}</div>
+            <div class="status-badge">${typeLabel}</div>
+            <div class="item-meta">YEAR: ${yr}</div>
         `;
         document.getElementById('listContent').prepend(card);
     }
 
-    function generateNewsDossiers(suburbs, start, end) {
+    function generateInvestigationLeads(suburbs, start, end) {
         const container = document.getElementById('newsLeads');
-        const terms = `(murder OR crime OR accident OR visit OR disaster) -sport -results`;
+        const terms = `(murder OR crime OR accident OR visit OR disaster) -sport`;
         
-        suburbs.slice(0, 5).forEach(sub => {
+        suburbs.slice(0, 3).forEach(sub => {
             const group = document.createElement('div');
             group.className = 'news-group';
-            group.innerHTML = `<h4>Investigation: ${sub}</h4>`;
+            group.innerHTML = `<h4>Dossier: ${sub}</h4>`;
             
-            const trove = document.createElement('a');
-            trove.className = 'news-btn'; trove.target = "_blank";
-            trove.href = `https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${encodeURIComponent(sub + " " + terms.replace(/[()]/g,""))}&dateFrom=${start}-01-01&dateTo=${end}-12-31`;
-            trove.innerText = `Search Trove Newspapers`;
-            group.appendChild(trove);
+            // Newspaper Section
+            group.innerHTML += `<div style="font-size:10px; font-weight:bold; margin-bottom:5px;">ARCHIVES</div>`;
+            group.innerHTML += `<a class="news-btn" target="_blank" href="https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${encodeURIComponent(sub + " " + terms.replace(/[()]/g,""))}&dateFrom=${start}-01-01&dateTo=${end}-12-31">Trove Papers (AU)</a>`;
+            group.innerHTML += `<a class="news-btn" target="_blank" href="https://www.google.com/search?q=site:theage.com.au+OR+site:smh.com.au+%22${encodeURIComponent(sub)}%22+${encodeURIComponent(terms)}+${start}..${end}">The Age / SMH Archives</a>`;
 
-            const major = document.createElement('a');
-            major.className = 'news-btn'; major.target = "_blank";
-            major.href = `https://www.google.com/search?q=site:theage.com.au+OR+site:smh.com.au+"${encodeURIComponent(sub)}"+${encodeURIComponent(terms)}+${start}..${end}`;
-            major.innerText = `Search Archive Papers`;
-            group.appendChild(major);
+            // Social & Community Section
+            group.innerHTML += `<div style="font-size:10px; font-weight:bold; margin:10px 0 5px 0;">COMMUNITY & SOCIAL MEDIA</div>`;
+            group.innerHTML += `<div style="display:flex; flex-wrap:wrap;">
+                <a class="social-btn" target="_blank" href="https://www.facebook.com/search/groups/?q=${encodeURIComponent(sub + " History")}">FB Groups</a>
+                <a class="social-btn" target="_blank" href="https://www.reddit.com/search/?q=${encodeURIComponent(sub + " history")}">Reddit Discussions</a>
+                <a class="social-btn" target="_blank" href="https://www.youtube.com/results?search_query=${encodeURIComponent(sub + " history " + start + " " + end)}">YouTube Footage</a>
+            </div>`;
 
             container.appendChild(group);
         });
