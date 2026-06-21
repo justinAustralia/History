@@ -3,25 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AU History Forensic Portal</title>
+    <title>AU Forensic History Portal v16</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { 
-            --cobalt: #001f3f; 
-            --gold: #ffca28; 
-            --paper: #fdfaf5; 
-            --incident-red: #b71c1c; 
-            --landmark-green: #2e7d32; 
-            --person-purple: #6a1b9a;
-            --social-blue: #1877F2;
+            --cobalt: #001f3f; --gold: #ffca28; --paper: #fdfaf5; 
+            --incident-red: #b71c1c; --landmark-green: #2e7d32; 
+            --person-purple: #6a1b9a; --social-blue: #1877F2;
         }
         
         * { box-sizing: border-box; }
         body { margin: 0; font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--paper); color: #333; }
         
+        /* Header */
         #header { 
             padding: 12px; background: var(--cobalt); color: white; 
-            display: grid; grid-template-columns: 1fr; gap: 12px;
+            display: grid; grid-template-columns: 1fr; gap: 10px;
             z-index: 1001; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         @media (min-width: 768px) {
@@ -30,55 +27,11 @@
 
         .input-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 10px; text-transform: uppercase; color: var(--gold); font-weight: bold; }
-        input, button { padding: 12px; border-radius: 6px; border: 1px solid #444; font-size: 14px; width: 100%; }
-        
+        input, button { padding: 10px; border-radius: 6px; border: 1px solid #444; font-size: 14px; }
         .btn-main { background: var(--gold); color: #000; font-weight: bold; cursor: pointer; border: none; }
 
-        #settings-bar { 
-            background: #00152b; padding: 10px 15px; display: flex; 
-            align-items: center; justify-content: space-between; 
-            border-bottom: 2px solid var(--gold); z-index: 1000; 
-        }
-        
-        #map { flex: 0 0 35vh; width: 100%; position: relative; }
-        @media (min-width: 768px) { #map { flex: 1; } }
-        
-        #results-container { display: flex; flex-direction: column; background: white; overflow-y: auto; }
-        @media (min-width: 768px) { #results-container { flex-direction: row; height: 400px; overflow: hidden; } }
-
-        #incident-feed { flex: 1.6; overflow-y: auto; border-bottom: 1px solid #ddd; padding: 15px; }
-        #intel-dossier { flex: 1.4; overflow-y: auto; background: #f1f3f5; padding: 15px; }
-
-        .section-title { font-size: 11px; font-weight: 900; color: var(--cobalt); border-bottom: 2px solid var(--cobalt); margin-bottom: 12px; padding-bottom: 4px; text-transform: uppercase; }
-        
-        /* Event Cards */
-        .item-card { border-bottom: 1px solid #eee; padding: 16px 12px; display: block; text-decoration: none; color: inherit; position: relative; }
-        .item-card:hover { background: #fffde7; }
-        .item-title { font-weight: 800; font-size: 15px; margin-bottom: 6px; padding-right: 85px; line-height: 1.3; }
-        
-        /* Classification Themes */
-        .item-card.type-incident .item-title { color: var(--incident-red); }
-        .item-card.type-landmark .item-title { color: var(--landmark-green); }
-        .item-card.type-person .item-title { color: var(--person-purple); }
-
-        .status-badge { position: absolute; top: 16px; right: 12px; font-size: 8px; font-weight: 900; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; text-align: center; width: 75px; }
-        .type-incident .status-badge { background: #ffebee; color: var(--incident-red); border: 1px solid var(--incident-red); }
-        .type-landmark .status-badge { background: #e8f5e9; color: var(--landmark-green); border: 1px solid var(--landmark-green); }
-        .type-person .status-badge { background: #f3e5f5; color: var(--person-purple); border: 1px solid var(--person-purple); }
-
-        .item-meta { font-size: 11px; color: #555; display: flex; align-items: center; gap: 8px; font-family: monospace; }
-
-        /* Dossier Blocks */
-        .suburb-intel-block { background: white; border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 20px; }
-        .suburb-intel-block h4 { margin: 0 0 10px 0; font-size: 14px; color: var(--cobalt); }
-        
-        .social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .social-link { padding: 10px; border-radius: 6px; text-decoration: none; font-size: 10px; font-weight: bold; color: white; text-align: center; }
-        .fb { background: var(--social-blue); }
-        .rd { background: #FF4500; }
-        .yt { background: #FF0000; }
-        .tr { background: #8b0000; }
-
+        /* Settings */
+        #settings-bar { background: #00152b; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--gold); z-index: 1000; }
         .switch-container { display: flex; align-items: center; gap: 8px; color: white; font-size: 11px; font-weight: bold; }
         .switch { position: relative; width: 40px; height: 22px; display: inline-block; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -87,6 +40,45 @@
         input:checked + .slider { background: var(--landmark-green); }
         input:checked + .slider:before { transform: translateX(18px); }
 
+        /* Map & Results */
+        #map { flex: 0 0 35vh; width: 100%; }
+        @media (min-width: 768px) { #map { flex: 1; } }
+        
+        #results-container { display: flex; flex-direction: column; background: white; overflow-y: auto; }
+        @media (min-width: 768px) { #results-container { flex-direction: row; height: 400px; overflow: hidden; } }
+
+        #incident-feed { flex: 1.6; overflow-y: auto; border-bottom: 1px solid #ddd; padding: 15px; }
+        #intel-dossier { flex: 1.4; overflow-y: auto; background: #f1f3f5; padding: 15px; }
+        @media (min-width: 768px) { #incident-feed { border-bottom: none; border-right: 1px solid #ddd; } }
+
+        .section-title { font-size: 11px; font-weight: 900; color: var(--cobalt); border-bottom: 2px solid var(--cobalt); margin-bottom: 12px; padding-bottom: 4px; text-transform: uppercase; }
+        
+        /* Event Cards */
+        .item-card { border-bottom: 1px solid #eee; padding: 14px 12px; display: block; text-decoration: none; color: inherit; position: relative; transition: background 0.1s; }
+        .item-card:hover { background: #fffde7; }
+        .item-title { font-weight: 800; font-size: 14px; margin-bottom: 4px; padding-right: 85px; line-height: 1.3; }
+        
+        .item-card.type-incident .item-title { color: var(--incident-red); }
+        .item-card.type-landmark .item-title { color: var(--landmark-green); }
+        .item-card.type-person .item-title { color: var(--person-purple); }
+
+        .status-badge { position: absolute; top: 14px; right: 12px; font-size: 8px; font-weight: 900; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; text-align: center; width: 80px; }
+        .type-incident .status-badge { background: #ffebee; color: var(--incident-red); border: 1px solid var(--incident-red); }
+        .type-landmark .status-badge { background: #e8f5e9; color: var(--landmark-green); border: 1px solid var(--landmark-green); }
+        .type-person .status-badge { background: #f3e5f5; color: var(--person-purple); border: 1px solid var(--person-purple); }
+
+        .item-meta { font-size: 11px; color: #666; font-family: monospace; }
+
+        /* Dossier Social Links */
+        .suburb-intel-block { background: white; border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .suburb-intel-block h4 { margin: 0 0 8px 0; font-size: 14px; color: var(--cobalt); border-bottom: 1px solid #eee; }
+        .social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .social-link { padding: 8px; border-radius: 4px; text-decoration: none; font-size: 10px; font-weight: bold; color: white; text-align: center; }
+        .fb { background: var(--social-blue); }
+        .rd { background: #FF4500; }
+        .yt { background: #FF0000; }
+        .tr { background: #8b0000; }
+
         #loader { display: none; color: var(--gold); font-size: 12px; font-weight: bold; }
     </style>
 </head>
@@ -94,7 +86,7 @@
 
 <div id="header">
     <div class="input-group">
-        <label>Investigation Site (AU)</label>
+        <label>Location (AU)</label>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="addressInput" placeholder="Suburb or Town">
             <button onclick="searchAddress()" style="background:#333; color:white; width: auto; cursor:pointer;">GO</button>
@@ -105,13 +97,13 @@
         <input type="range" id="radius" min="1" max="50" value="5">
     </div>
     <div class="input-group">
-        <label>Timeline Range</label>
+        <label>Years</label>
         <div style="display: flex; gap: 5px;">
             <input type="number" id="startYear" value="1900">
             <input type="number" id="endYear" value="2000">
         </div>
     </div>
-    <button class="btn-main" onclick="runForensicSearch()">EXECUTE PROBE</button>
+    <button class="btn-main" onclick="runForensicSearch()">BROAD SEARCH</button>
 </div>
 
 <div id="settings-bar">
@@ -123,20 +115,20 @@
         </label>
         <span>INCLUDE LANDMARKS</span>
     </div>
-    <div id="loader">COLLECTING INTELLIGENCE...</div>
+    <div id="loader">POLLED 3 DATABASES...</div>
 </div>
 
 <div id="map"></div>
 
 <div id="results-container">
     <div id="incident-feed">
-        <div class="section-title">Verified Historical Feed</div>
+        <div class="section-title">Timeline Results</div>
         <div id="listContent" style="color:#888; font-size:13px; text-align: center; padding-top: 30px;">
-            Identify a location to begin data harvest.
+            Enter location and click Broad Search.
         </div>
     </div>
     <div id="intel-dossier">
-        <div class="section-title">Suburban Social Dossiers</div>
+        <div class="section-title">Suburban Social Probes</div>
         <div id="intelContent"></div>
     </div>
 </div>
@@ -199,11 +191,14 @@
         suburbs.slice(0, 5).forEach(sub => generateSuburbIntel(sub, start, end));
 
         await Promise.all([
-            fetchWikidata(lat, lng, rad, start, end, showL),
+            fetchGreedyWikidata(lat, lng, rad, start, end, showL),
             ...suburbs.slice(0, 3).map(s => fetchWikipediaText(s, start, end))
         ]);
 
         document.getElementById('loader').style.display = "none";
+        if (window.innerWidth < 768) {
+            document.getElementById('results-container').scrollIntoView({ behavior: 'smooth' });
+        }
     }
 
     function generateSuburbIntel(suburb, start, end) {
@@ -215,48 +210,52 @@
             <div class="social-grid">
                 <a href="https://www.facebook.com/search/groups/?q=Lost ${suburb} History" target="_blank" class="social-link fb">Facebook</a>
                 <a href="https://www.reddit.com/search/?q=${suburb} history" target="_blank" class="social-link rd">Reddit</a>
-                <a href="https://www.youtube.com/results?search_query=${suburb} history" target="_blank" class="social-link yt">YouTube</a>
+                <a href="https://www.youtube.com/results?search_query=${suburb} history ${start} ${end}" target="_blank" class="social-link yt">YouTube</a>
                 <a href="https://trove.nla.gov.au/search/advanced/category/newspaper?keyword=${suburb}&dateFrom=${start}-01-01&dateTo=${end}-12-31" target="_blank" class="social-link tr">Trove</a>
             </div>
         `;
         container.appendChild(block);
     }
 
-    async function fetchWikidata(lat, lng, rad, s, e, showL) {
-        const incidents = "wd:Q838948 wd:Q171558 wd:Q1100989 wd:Q1543115 wd:Q3839 wd:Q214841 wd:Q132241";
-        const landmarks = "wd:Q1081138 wd:Q575759 wd:Q49833 wd:Q84015776";
-        const person = "wd:Q5"; // Human
-        
-        let typeList = incidents + " " + person;
-        if (showL) typeList += " " + landmarks;
-
+    async function fetchGreedyWikidata(lat, lng, rad, s, e, showL) {
+        // GREEDY QUERY: Find ANYTHING with a coordinate and a date, then exclude boring stuff.
         const query = `SELECT DISTINCT ?item ?itemLabel ?date ?loc ?type WHERE {
             SERVICE wikibase:around {
                 ?item wdt:P625 ?loc .
                 bd:serviceParam wikibase:center "Point(${lng} ${lat})"^^geo:wktLiteral .
                 bd:serviceParam wikibase:radius "${rad}" .
             }
-            ?item wdt:P31/wdt:P279* ?type .
-            VALUES ?type { ${typeList} }
-            MINUS { ?item wdt:P31/wdt:P279* wd:Q300920 } 
-            ?item wdt:P585|wdt:P580|wdt:P569|wdt:P570 ?date . # Include birth/death dates for people
+            ?item wdt:P31 ?type .
+            
+            # Exclude schools, streets, businesses, and sports to surface the real history
+            MINUS { ?item wdt:P31/wdt:P279* wd:Q300920 } # Sports
+            MINUS { ?item wdt:P31/wdt:P279* wd:Q3914 }   # Schools
+            MINUS { ?item wdt:P31/wdt:P279* wd:Q79007 }  # Streets
+            
+            # Date detection across multiple properties
+            { ?item wdt:P585 ?date . } UNION { ?item wdt:P580 ?date . } UNION { ?item wdt:P569 ?date . } UNION { ?item wdt:P570 ?date . }
+            
             FILTER(YEAR(?date) >= ${s} && YEAR(?date) <= ${e})
             SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-        } LIMIT 100`;
+        } LIMIT 150`;
 
         try {
             const res = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query));
             const data = await res.json();
             data.results.bindings.forEach(row => {
-                const isP = row.type.value.includes("Q5");
-                const isL = ["Q1081138","Q575759","Q49833","Q84015776"].some(q => row.type.value.includes(q));
+                const isP = row.type.value.includes("Q5") || row.itemLabel.value.split(' ').length <= 3; // Basic person heuristic
+                const isL = ["memorial","monument","building","park","statue"].some(k => row.itemLabel.value.toLowerCase().includes(k));
+                
+                if (!showL && isL && !isP) return; // Skip if landmarks off
+                
                 renderItem(row.itemLabel.value, new Date(row.date.value).getFullYear(), row.item.value, isL, isP, row.loc.value);
             });
-        } catch(e) {}
+        } catch(err) {}
     }
 
     async function fetchWikipediaText(suburb, s, e) {
-        const query = `"${suburb}" (history OR incident OR person) -sport`;
+        // Broaden search terms to find more events
+        const query = `"${suburb}" (history OR incident OR fire OR riot OR visit OR death OR opened) -sport`;
         const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
         try {
             const res = await fetch(url);
@@ -270,17 +269,13 @@
 
     function renderItem(title, yr, url, isL, isP, locStr) {
         let typeClass = 'type-incident';
-        let typeLabel = 'Incident';
+        let typeLabel = 'Event';
         let markerColor = '#b71c1c';
 
         if (isP) {
-            typeClass = 'type-person';
-            typeLabel = 'Person';
-            markerColor = '#6a1b9a';
+            typeClass = 'type-person'; typeLabel = 'Person'; markerColor = '#6a1b9a';
         } else if (isL) {
-            typeClass = 'type-landmark';
-            typeLabel = 'Landmark';
-            markerColor = '#2e7d32';
+            typeClass = 'type-landmark'; typeLabel = 'Landmark'; markerColor = '#2e7d32';
         }
 
         if (locStr) {
